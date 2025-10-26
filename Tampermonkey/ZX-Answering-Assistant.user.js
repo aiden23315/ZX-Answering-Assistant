@@ -589,6 +589,10 @@
         }
         lastAnswerTime = now;
 
+        // 记录选择结果
+        let selectionResults = [];
+        let expectedSelections = 0;
+
         // 检测题目类型
         const isMultipleChoice = document.querySelectorAll('.an-item .el-checkbox').length > 0;
         const isSingleChoice = document.querySelectorAll('.an-item .el-radio').length > 0;
@@ -600,6 +604,7 @@
 
         // 判断题处理
         if (answerKey === '√' || answerKey === '×') {
+            expectedSelections = 1;
             const options = document.querySelectorAll('.an-item .el-radio__label');
             for (const opt of options) {
                 const content = opt.querySelector('.option-content')?.textContent || '';
@@ -611,10 +616,26 @@
                         if (input && !input.checked) {
                             input.click();
                             console.log('✅ 已自动选择判断题答案:', answerKey);
-                            return;
+                            selectionResults.push({
+                                key: answerKey,
+                                success: true,
+                                description: '判断题选项'
+                            });
+                        } else if (input && input.checked) {
+                            selectionResults.push({
+                                key: answerKey,
+                                success: true,
+                                description: '判断题选项(已选中)'
+                            });
                         }
                     } catch (e) {
                         console.error('点击判断题选项失败:', e);
+                        selectionResults.push({
+                            key: answerKey,
+                            success: false,
+                            description: '判断题选项',
+                            error: e.message
+                        });
                     }
                 }
             }
@@ -622,30 +643,62 @@
         // 多选题处理
         else if (answerKey.length > 1 && isMultipleChoice) {
             const keys = answerKey.split('');
+            expectedSelections = keys.length;
             for (const key of keys) {
                 const options = document.querySelectorAll('.an-item .option-answer');
+                let found = false;
                 for (const opt of options) {
                     const text = opt.textContent.trim();
                     // 匹配选项开头（A. 选项内容 → 匹配 "A"）
                     if (text.startsWith(key)) {
+                        found = true;
                         try {
                             // 直接设置选中状态
                             const input = opt.closest('.el-checkbox')?.querySelector('input[type="checkbox"]');
                             if (input && !input.checked) {
                                 input.click();
                                 console.log(`✅ 已自动选择多选题选项: ${key}`);
+                                selectionResults.push({
+                                    key: key,
+                                    success: true,
+                                    description: '多选题选项'
+                                });
                                 break; // 选中一个选项后跳出内层循环
+                            } else if (input && input.checked) {
+                                selectionResults.push({
+                                    key: key,
+                                    success: true,
+                                    description: '多选题选项(已选中)'
+                                });
+                                break;
                             }
                         } catch (e) {
                             console.error('点击多选题选项失败:', e);
+                            selectionResults.push({
+                                key: key,
+                                success: false,
+                                description: '多选题选项',
+                                error: e.message
+                            });
+                            break;
                         }
                     }
+                }
+                
+                if (!found) {
+                    selectionResults.push({
+                        key: key,
+                        success: false,
+                        description: '多选题选项',
+                        error: '未找到匹配选项'
+                    });
                 }
             }
         }
         // 单选题处理
         else {
             const keys = answerKey.split('');
+            expectedSelections = 1;
             for (const key of keys) {
                 // 优先尝试多选题选项（兼容题目类型错误的情况）
                 let options = document.querySelectorAll('.an-item .option-answer');
@@ -655,13 +708,25 @@
                     const text = opt.textContent.trim();
                     // 匹配选项开头（A. 选项内容 → 匹配 "A"）
                     if (text.startsWith(key)) {
+                        found = true;
                         try {
                             // 先尝试多选题选项
                             let input = opt.closest('.el-checkbox')?.querySelector('input[type="checkbox"]');
                             if (input && !input.checked) {
                                 input.click();
                                 console.log(`✅ 已自动选择选项(多选模式): ${key}`);
-                                found = true;
+                                selectionResults.push({
+                                    key: key,
+                                    success: true,
+                                    description: '选项(多选模式)'
+                                });
+                                break;
+                            } else if (input && input.checked) {
+                                selectionResults.push({
+                                    key: key,
+                                    success: true,
+                                    description: '选项(多选模式,已选中)'
+                                });
                                 break;
                             }
 
@@ -670,20 +735,64 @@
                             if (input && !input.checked) {
                                 input.click();
                                 console.log(`✅ 已自动选择选项(单选模式): ${key}`);
-                                found = true;
+                                selectionResults.push({
+                                    key: key,
+                                    success: true,
+                                    description: '选项(单选模式)'
+                                });
+                                break;
+                            } else if (input && input.checked) {
+                                selectionResults.push({
+                                    key: key,
+                                    success: true,
+                                    description: '选项(单选模式,已选中)'
+                                });
                                 break;
                             }
                         } catch (e) {
                             console.error('点击选项失败:', e);
+                            selectionResults.push({
+                                key: key,
+                                success: false,
+                                description: '选项',
+                                error: e.message
+                            });
+                            break;
                         }
                     }
+                }
+
+                if (!found) {
+                    selectionResults.push({
+                        key: key,
+                        success: false,
+                        description: '选项',
+                        error: '未找到匹配选项'
+                    });
                 }
 
                 if (found) break;
             }
         }
 
-        console.warn('❌ 未找到可点击的选项');
+        // 检查选择结果并使用统一通知函数提示
+        setTimeout(() => {
+            const successfulSelections = selectionResults.filter(r => r.success).length;
+            const failedSelections = selectionResults.filter(r => !r.success);
+            
+            if (successfulSelections === expectedSelections) {
+                // 全部选择成功
+                showNotification(`已成功选择答案: ${answerKey}`, 'success', 3000);
+            } else if (successfulSelections > 0) {
+                // 部分选择成功
+                const failedKeys = failedSelections.map(r => r.key).join(', ');
+                showNotification(` 部分答案选择成功 (${successfulSelections}/${expectedSelections})，失败的选项: ${failedKeys}`, 'warning', 4000);
+            } else {
+                // 全部选择失败
+                const errorMessages = failedSelections.map(r => `${r.key}: ${r.error}`).join(', ');
+                showNotification(` 答案选择失败，错误信息: ${errorMessages}`, 'error', 5000);
+            }
+        }, 500); // 延迟500ms检查，确保DOM更新完成
     }
 
     // ========== 观察器控制 ==========
@@ -1838,7 +1947,7 @@
     }
 
     // ========== 统一通知函数 ==========
-    function showNotification(message, type = 'success', duration = 3000) {
+    function showNotification(message, type = 'success', duration = 3500) {
         // 类型样式配置
         const typeConfig = {
             success: {
@@ -4514,136 +4623,7 @@
         showCompletionNotification();
     }
 
-    // ========== 统一通知函数 ==========
-    function showNotification(message, type = 'success', duration = 3000) {
-        // 类型样式配置
-        const typeConfig = {
-            success: {
-                background: 'linear-gradient(135deg, #00C853, #66BB6A)',
-                color: 'white',
-                icon: '✅',
-                boxShadow: '0 8px 24px rgba(0, 200, 83, 0.3)'
-            },
-            error: {
-                background: 'linear-gradient(135deg, #F44336, #EF5350)',
-                color: 'white',
-                icon: '❌',
-                boxShadow: '0 8px 24px rgba(244, 67, 54, 0.3)'
-            },
-            info: {
-                background: 'linear-gradient(135deg, #2196F3, #64B5F6)',
-                color: 'white',
-                icon: 'ℹ️',
-                boxShadow: '0 8px 24px rgba(33, 150, 243, 0.3)'
-            },
-            warning: {
-                background: 'linear-gradient(135deg, #FF9800, #FFB74D)',
-                color: 'white',
-                icon: '⚠️',
-                boxShadow: '0 8px 24px rgba(255, 152, 0, 0.3)'
-            }
-        };
 
-        const config = typeConfig[type] || typeConfig.success;
-
-        // 移除旧的通知样式（如果存在）
-        const oldStyle = document.getElementById('zx-notification-style');
-        if (oldStyle) oldStyle.remove();
-
-        // 添加通知样式
-        const notificationStyle = document.createElement('style');
-        notificationStyle.id = 'zx-notification-style';
-        notificationStyle.textContent = `
-            @keyframes zxSlideInRight {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes zxSlideOutRight {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-            @keyframes zxSlideInTop {
-                from { transform: translateY(-100%); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-            }
-            @keyframes zxSlideOutTop {
-                from { transform: translateY(0); opacity: 1; }
-                to { transform: translateY(-100%); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(notificationStyle);
-
-        // 创建通知元素
-        const notification = document.createElement('div');
-        notification.className = 'zx-notification';
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${config.background};
-            color: ${config.color};
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: ${config.boxShadow};
-            z-index: 2147483647;
-            font-size: 14px;
-            font-weight: 600;
-            animation: zxSlideInRight 0.5s ease-out;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            max-width: 350px;
-            word-break: break-word;
-        `;
-        notification.innerHTML = `<span>${config.icon}</span><span>${message}</span>`;
-
-        // 添加关闭按钮
-        const closeBtn = document.createElement('span');
-        closeBtn.innerHTML = '×';
-        closeBtn.style.cssText = `
-            position: absolute;
-            top: 8px;
-            right: 12px;
-            cursor: pointer;
-            font-size: 16px;
-            opacity: 0.8;
-            transition: opacity 0.2s, transform 0.2s;
-        `;
-        closeBtn.addEventListener('mouseenter', () => {
-            closeBtn.style.opacity = '1';
-            closeBtn.style.transform = 'scale(1.1)';
-        });
-        closeBtn.addEventListener('mouseleave', () => {
-            closeBtn.style.opacity = '0.8';
-            closeBtn.style.transform = 'scale(1)';
-        });
-        closeBtn.addEventListener('click', () => {
-            removeNotification();
-        });
-        notification.appendChild(closeBtn);
-
-        document.body.appendChild(notification);
-
-        // 自动移除函数
-        function removeNotification() {
-            notification.style.animation = 'zxSlideOutRight 0.5s ease-out';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-                if (notificationStyle.parentNode) {
-                    notificationStyle.parentNode.removeChild(notificationStyle);
-                }
-            }, 500);
-        }
-
-        // 自动关闭计时器
-        setTimeout(removeNotification, duration);
-
-        return notification;
-    }
 
     // ========== 创建题目显示按钮 ==========
     function createToggleButton() {
