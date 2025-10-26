@@ -790,7 +790,58 @@
             } else {
                 // 全部选择失败
                 const errorMessages = failedSelections.map(r => `${r.key}: ${r.error}`).join(', ');
-                showNotification(` 答案选择失败，错误信息: ${errorMessages}`, 'error', 5000);
+                showNotification(`无法自动选择答案，请手动选择正确答案: ${answerKey}`, 'error', 8000);
+                
+                // 创建一个更显眼的提示框，显示正确答案
+                const answerHint = document.createElement('div');
+                answerHint.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: linear-gradient(135deg, #ff5252 0%, #ff1744 100%);
+                    color: white;
+                    padding: 20px 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                    z-index: 2147483647;
+                    font-size: 18px;
+                    font-weight: bold;
+                    text-align: center;
+                    animation: answerHintPulse 1.5s infinite;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                `;
+                
+                // 添加动画样式
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes answerHintPulse {
+                        0% { transform: translate(-50%, -50%) scale(1); }
+                        50% { transform: translate(-50%, -50%) scale(1.05); }
+                        100% { transform: translate(-50%, -50%) scale(1); }
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                answerHint.innerHTML = `
+                    <div style="margin-bottom: 10px;">请手动选择正确答案</div>
+                    <div style="font-size: 24px; letter-spacing: 5px;">${answerKey}</div>
+                    <div style="margin-top: 15px; font-size: 14px; opacity: 0.9;">点击此提示框关闭</div>
+                `;
+                
+                document.body.appendChild(answerHint);
+                
+                // 点击提示框关闭
+                answerHint.addEventListener('click', function() {
+                    document.body.removeChild(answerHint);
+                });
+                
+                // 10秒后自动关闭
+                setTimeout(() => {
+                    if (document.body.contains(answerHint)) {
+                        document.body.removeChild(answerHint);
+                    }
+                }, 10000);
             }
         }, 500); // 延迟500ms检查，确保DOM更新完成
     }
