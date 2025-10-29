@@ -181,6 +181,38 @@
         return kb;
     }
 
+    // ========== 将提取的题目格式化为知识库格式 ==========
+    function formatQuestionsToKnowledgeBase() {
+        if (storedQuestions.length === 0) {
+            return '';
+        }
+
+        let formattedText = '';
+        const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+        storedQuestions.forEach((question, index) => {
+            const options = answerCache.get(question.id) || [];
+            if (options.length === 0) return; // 跳过没有答案的题目
+
+            // 添加题目编号和标题
+            formattedText += `---\n\n### ${index + 1}. ${question.title}\n`;
+
+            // 添加选项
+            options.forEach((option, idx) => {
+                formattedText += `${letters[idx] || (idx + 1)}. ${option.content}\n`;
+            });
+
+            // 添加答案
+            const correctAnswers = options
+                .map((opt, idx) => opt.isCorrect ? (letters[idx] || (idx + 1)) : null)
+                .filter(ans => ans !== null);
+
+            formattedText += `\n**答案：** ${correctAnswers.join('、')}\n\n---`;
+        });
+
+        return formattedText.trim();
+    }
+
     // ========== 标准化题目（用于模糊匹配）==========
     function normalize(str) {
         // 保存原始字符串，用于检测是否包含原始HTML实体
@@ -292,6 +324,107 @@
             .replace(/`/g, '') // 移除反引号
             .replace(/[·•…—–]/g, '') // 移除特殊符号
             .toLowerCase(); // 转换为小写
+    }
+
+    // ========== 公共函数 - 处理重复代码 ==========
+
+    // 统一的日志函数
+    function logSelection(action, key, mode) {
+        const modeText = mode ? `(${mode})` : '';
+        console.log(`✅ 已自动${action}: ${key} ${modeText}`);
+    }
+
+    // 智能分割答案键
+    function splitAnswerKey(answerKey) {
+        // 尝试不同的分割方式
+        if (answerKey.includes('、') || answerKey.includes(',') || answerKey.includes('，')) {
+            // 如果包含分隔符，按分隔符分割
+            return answerKey.split(/[、,，]/).filter(k => k.trim());
+        } else {
+            // 如果没有分隔符，按字符分割
+            return answerKey.split('');
+        }
+    }
+
+    // 查找所有选项
+    function findOptions() {
+        return document.querySelectorAll('.an-item .option-answer');
+    }
+
+    // 点击多选框选项
+    function clickCheckboxOption(optionElement, key) {
+        const input = optionElement.closest('.el-checkbox')?.querySelector('input[type="checkbox"]');
+        if (input && !input.checked) {
+            input.click();
+            if (key) {
+                logSelection('选择多选题选项', key);
+            }
+            return true;
+        } else if (input && input.checked && key) {
+            logSelection('多选题选项已选中', key);
+            return true;
+        }
+        return false;
+    }
+
+    // 点击单选框选项
+    function clickRadioOption(optionElement, key) {
+        const input = optionElement.closest('.el-radio')?.querySelector('input[type="radio"]');
+        if (input && !input.checked) {
+            input.click();
+            if (key) {
+                logSelection('选择单选题选项', key);
+            }
+            return true;
+        } else if (input && input.checked && key) {
+            logSelection('单选题选项已选中', key);
+            return true;
+        }
+        return false;
+    }
+
+    // 选择选项（整合查找和点击逻辑）
+    function selectOption(key, preferMultipleChoice = false) {
+        const options = findOptions();
+        
+        for (const opt of options) {
+            const text = opt.textContent.trim();
+            // 匹配选项开头（A. 选项内容 → 匹配 "A"）
+            if (text.startsWith(key)) {
+                try {
+                    // 根据偏好尝试不同类型的选项
+                    if (preferMultipleChoice) {
+                        // 优先尝试多选框
+                        if (clickCheckboxOption(opt, key)) {
+                            logSelection('选择选项', key, '多选模式');
+                            return true;
+                        }
+                        
+                        // 多选框失败，尝试单选框
+                        if (clickRadioOption(opt, key)) {
+                            logSelection('选择选项', key, '单选模式');
+                            return true;
+                        }
+                    } else {
+                        // 优先尝试单选框
+                        if (clickRadioOption(opt, key)) {
+                            logSelection('选择选项', key, '单选模式');
+                            return true;
+                        }
+                        
+                        // 单选框失败，尝试多选框
+                        if (clickCheckboxOption(opt, key)) {
+                            logSelection('选择选项', key, '多选模式');
+                            return true;
+                        }
+                    }
+                } catch (e) {
+                    console.error('点击选项失败:', e);
+                }
+            }
+        }
+        
+        return false;
     }
 
     // ========== 创建浮动按钮 ==========
@@ -420,6 +553,7 @@
                     <div style="margin-bottom:10px;">
                         <button id="auto-browse-btn" style="width:100%; padding:8px; background:#409eff; color:white; border:none; border-radius:4px; margin-bottom:8px;">🤖 自动遍历答案</button>
                         <button id="show-questions-btn" style="width:100%; padding:8px; background:#4CAF50; color:white; border:none; border-radius:4px; margin-bottom:8px;">📋 显示题目列表</button>
+                        <button id="apply-questions-btn" style="width:100%; padding:8px; background:#9C27B0; color:white; border:none; border-radius:4px; margin-bottom:8px;">📝 一键应用题目</button>
                         <button id="speed-settings-btn" style="width:100%; padding:8px; background:#FFA726; color:white; border:none; border-radius:4px; margin-bottom:8px;">⚙️ 速度设置</button>
                     </div>
                     <div id="extraction-status" style="padding:8px; background:#f0f0f0; border-radius:4px; font-size:12px;">
@@ -587,6 +721,47 @@
             } else {
                 alert('请先触发题目加载');
             }
+        };
+
+        panel.querySelector('#apply-questions-btn').onclick = () => {
+            if (storedQuestions.length === 0) {
+                showNotification('没有提取到题目，请先提取题目', 'error');
+                return;
+            }
+            
+            // 检查是否所有题目都有答案
+            const validQuestionIds = new Set(storedQuestions.map(q => q.id));
+            const filteredCache = Array.from(answerCache.entries()).filter(
+                ([qid]) => validQuestionIds.has(qid)
+            );
+            
+            const total = storedQuestions.length;
+            const completed = filteredCache.reduce((count, [qid, opts]) => {
+                return count + (opts.length > 0 ? 1 : 0);
+            }, 0);
+            
+            if (completed < total) {
+                showNotification(`还有 ${total - completed} 道题目未提取答案，请先完成答案提取`, 'warning');
+                return;
+            }
+            
+            // 格式化题目为知识库格式
+            const formattedQuestions = formatQuestionsToKnowledgeBase();
+            
+            // 写入到kb-input和knowledge_base_raw
+            const kbInput = panel.querySelector('#kb-input');
+            kbInput.value = formattedQuestions;
+            GM_setValue('knowledge_base_raw', formattedQuestions);
+            
+            // 解析题库
+            KNOWLEDGE_BASE = parseRawText(formattedQuestions);
+            renderFullList();
+            
+            // 切换到答题助手标签页
+            const answerTab = panel.querySelector('[data-tab="answer"]');
+            answerTab.click();
+            
+            showNotification(`已成功应用 ${total} 道题目到知识库`, 'success');
         };
 
         panel.querySelector('#speed-settings-btn').onclick = () => {
@@ -766,22 +941,13 @@
         }
         // 多选题处理
         else if (answerKey.length > 1 && isMultipleChoice) {
-            // 改进答案分割逻辑，正确处理分隔符
-            let keys = [];
-            // 尝试不同的分割方式
-            if (answerKey.includes('、') || answerKey.includes(',') || answerKey.includes('，')) {
-                // 如果包含分隔符，按分隔符分割
-                keys = answerKey.split(/[、,，]/).filter(k => k.trim());
-            } else {
-                // 如果没有分隔符，按字符分割
-                keys = answerKey.split('');
-            }
-            
+            // 使用公共函数分割答案
+            const keys = splitAnswerKey(answerKey);
             expectedSelections = keys.length;
             
             // 使用async/await处理多选题选项选择，确保每个选项都有足够时间被选中
             const processMultiChoiceOption = async (key) => {
-                const options = document.querySelectorAll('.an-item .option-answer');
+                const options = findOptions();
                 let found = false;
                 
                 for (const opt of options) {
@@ -790,11 +956,8 @@
                     if (text.startsWith(key)) {
                         found = true;
                         try {
-                            // 直接设置选中状态
-                            const input = opt.closest('.el-checkbox')?.querySelector('input[type="checkbox"]');
-                            if (input && !input.checked) {
-                                input.click();
-                                console.log(`✅ 已自动选择多选题选项: ${key}`);
+                            // 使用公共函数点击多选框
+                            if (clickCheckboxOption(opt, key)) {
                                 selectionResults.push({
                                     key: key,
                                     success: true,
@@ -804,7 +967,8 @@
                                 // 添加延迟，确保选项被正确选中
                                 await new Promise(resolve => setTimeout(resolve, 300));
                                 return true; // 选中成功
-                            } else if (input && input.checked) {
+                            } else {
+                                // 已经选中
                                 selectionResults.push({
                                     key: key,
                                     success: true,
@@ -850,91 +1014,16 @@
         }
         // 单选题处理
         else {
-            // 改进答案分割逻辑，正确处理分隔符
-            let keys = [];
-            // 尝试不同的分割方式
-            if (answerKey.includes('、') || answerKey.includes(',') || answerKey.includes('，')) {
-                // 如果包含分隔符，按分隔符分割
-                keys = answerKey.split(/[、,，]/).filter(k => k.trim());
-            } else {
-                // 如果没有分隔符，按字符分割
-                keys = answerKey.split('');
-            }
-            
+            // 使用公共函数分割答案
+            const keys = splitAnswerKey(answerKey);
             expectedSelections = 1;
+            
+            // 尝试选择第一个匹配的选项
             for (const key of keys) {
-                // 优先尝试多选题选项（兼容题目类型错误的情况）
-                let options = document.querySelectorAll('.an-item .option-answer');
-                let found = false;
-
-                for (const opt of options) {
-                    const text = opt.textContent.trim();
-                    // 匹配选项开头（A. 选项内容 → 匹配 "A"）
-                    if (text.startsWith(key)) {
-                        found = true;
-                        try {
-                            // 先尝试多选题选项
-                            let input = opt.closest('.el-checkbox')?.querySelector('input[type="checkbox"]');
-                            if (input && !input.checked) {
-                                input.click();
-                                console.log(`✅ 已自动选择选项(多选模式): ${key}`);
-                                selectionResults.push({
-                                    key: key,
-                                    success: true,
-                                    description: '选项(多选模式)'
-                                });
-                                break;
-                            } else if (input && input.checked) {
-                                selectionResults.push({
-                                    key: key,
-                                    success: true,
-                                    description: '选项(多选模式,已选中)'
-                                });
-                                break;
-                            }
-
-                            // 再尝试单选题选项
-                            input = opt.closest('.el-radio')?.querySelector('input[type="radio"]');
-                            if (input && !input.checked) {
-                                input.click();
-                                console.log(`✅ 已自动选择选项(单选模式): ${key}`);
-                                selectionResults.push({
-                                    key: key,
-                                    success: true,
-                                    description: '选项(单选模式)'
-                                });
-                                break;
-                            } else if (input && input.checked) {
-                                selectionResults.push({
-                                    key: key,
-                                    success: true,
-                                    description: '选项(单选模式,已选中)'
-                                });
-                                break;
-                            }
-                        } catch (e) {
-                            console.error('点击选项失败:', e);
-                            selectionResults.push({
-                                key: key,
-                                success: false,
-                                description: '选项',
-                                error: e.message
-                            });
-                            break;
-                        }
-                    }
+                const result = selectOption(key, selectionResults, false);
+                if (result.success) {
+                    break; // 单选题只需要找到一个匹配的选项
                 }
-
-                if (!found) {
-                    selectionResults.push({
-                        key: key,
-                        success: false,
-                        description: '选项',
-                        error: '未找到匹配选项'
-                    });
-                }
-
-                if (found) break;
             }
             
             // 选项处理完成后，验证选项是否真正被勾选
@@ -1151,25 +1240,16 @@
 
     // ========== 检查选项是否真正被勾选 ==========
     function verifyOptionSelection(answerKey, isMultipleChoice) {
-        // 改进答案分割逻辑，正确处理分隔符
-        let keys = [];
-        // 尝试不同的分割方式
-        if (answerKey.includes('、') || answerKey.includes(',') || answerKey.includes('，')) {
-            // 如果包含分隔符，按分隔符分割
-            keys = answerKey.split(/[、,，]/).filter(k => k.trim());
-        } else {
-            // 如果没有分隔符，按字符分割
-            keys = answerKey.split('');
-        }
-        
+        // 使用公共函数分割答案
+        const keys = splitAnswerKey(answerKey);
         const notSelectedKeys = [];
         
         for (const key of keys) {
             let found = false;
             let isSelected = false;
             
-            // 查找匹配的选项
-            const options = document.querySelectorAll('.an-item .option-answer');
+            // 使用公共函数查找选项
+            const options = findOptions();
             for (const opt of options) {
                 const text = opt.textContent.trim();
                 if (text.startsWith(key)) {
@@ -1454,6 +1534,12 @@
                     opt.classList.remove('selected');
                 });
                 option.classList.add('selected');
+            });
+
+            // 为整个div容器添加点击事件
+            option.addEventListener('click', () => {
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change'));
             });
 
             const label = document.createElement('label');
@@ -2283,16 +2369,39 @@
             // 触发页面重新加载数据（通过重新触发当前路由或重新发送请求）
             setTimeout(() => {
                 // 重新触发fetch请求
-                if (currentClassID) {
-                    const url = `/api/Knowledge/GetKnowQuestionEvaluation?classID=${currentClassID}`;
-                    fetch(url)
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log('重新获取数据成功:', data);
-                            // 数据会通过interceptFetch自动处理
-                        })
-                        .catch(error => console.error('重新获取数据失败:', error));
-                }
+            if (currentClassID) {
+                const url = `/api/Knowledge/GetKnowQuestionEvaluation?classID=${currentClassID}`;
+                fetch(url)
+                    .then(response => {
+                        // 检查响应状态
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        // 检查响应内容类型
+                        const contentType = response.headers.get('content-type');
+                        if (!contentType || !contentType.includes('application/json')) {
+                            throw new Error('响应不是有效的JSON格式');
+                        }
+                        
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('重新获取数据成功:', data);
+                        // 数据会通过interceptFetch自动处理
+                    })
+                    .catch(error => {
+                        console.error('重新获取数据失败:', error);
+                        // 提供更友好的错误提示
+                        if (error.message.includes('404')) {
+                            showNotification('题目列表API不可用，可能是网站已更新', 'warning', 5000);
+                        } else if (error.message.includes('JSON')) {
+                            showNotification('服务器返回了非JSON格式的数据', 'error', 3000);
+                        } else {
+                            showNotification('获取数据失败，请稍后重试', 'error', 3000);
+                        }
+                    });
+            }
             }, 500);
         }
 
@@ -2457,6 +2566,25 @@
         setTimeout(removeNotification, duration);
 
         return notification;
+    }
+
+    // 完成通知函数
+    function showCompletionNotification() {
+        const validQuestionIds = new Set(storedQuestions.map(q => q.id));
+        const filteredCache = Array.from(answerCache.entries()).filter(
+            ([qid]) => validQuestionIds.has(qid)
+        );
+
+        const total = storedQuestions.length;
+        const completed = filteredCache.reduce((count, [qid, opts]) => {
+            return count + (opts.length > 0 ? 1 : 0);
+        }, 0);
+
+        const message = total > 0 
+            ? `题目提取完成！共提取 ${total} 道题目，已完成 ${completed} 道答案提取。`
+            : '题目提取完成！';
+
+        showNotification(message, 'success', 5000);
     }
 
     // ========== 创建题目显示按钮 ==========
@@ -2679,11 +2807,36 @@
         window.fetch = async (...args) => {
             try {
                 const response = await originalFetch.apply(this, args);
-                handleResponse(await response.clone().json(), args[0], toggleButton);
+                
+                // 检查响应状态
+                if (!response.ok) {
+                    console.warn(`API请求失败: ${response.status} ${response.statusText} for ${args[0]}`);
+                    // 如果是404错误，尝试提供更友好的错误处理
+                    if (response.status === 404) {
+                        const url = new URL(args[0], window.location.origin);
+                        if (url.pathname.endsWith('GetKnowQuestionEvaluation')) {
+                            console.warn('题目列表API端点不存在，可能是网站API已更改');
+                            showNotification('题目列表API不可用，请检查网站是否更新', 'warning', 5000);
+                        }
+                    }
+                    return response;
+                }
+                
+                // 安全地尝试解析JSON
+                try {
+                    const clonedResponse = response.clone();
+                    const jsonData = await clonedResponse.json();
+                    handleResponse(jsonData, args[0], toggleButton);
+                } catch (jsonError) {
+                    console.warn(`JSON解析失败: ${jsonError.message} for ${args[0]}`);
+                    // 不抛出错误，允许原始响应继续处理
+                }
+                
                 return response;
             } catch (e) {
                 console.error('Fetch请求失败:', e);
-                throw e;
+                // 不再重新抛出错误，避免中断页面功能
+                return Promise.reject(e);
             }
         };
     }
@@ -2700,15 +2853,33 @@
         XMLHttpRequest.prototype.send = function (...args) {
             this.addEventListener('load', () => {
                 try {
-                    if (this.readyState === 4 && this.status === 200) {
-                        const contentType = this.getResponseHeader('Content-Type');
-                        if (contentType && contentType.includes('application/json')) {
-                            const response = JSON.parse(this.responseText);
-                            handleResponse(response, this._url, toggleButton);
+                    // 检查响应状态
+                    if (this.readyState === 4) {
+                        if (this.status === 404) {
+                            const url = new URL(this._url, window.location.origin);
+                            if (url.pathname.endsWith('GetKnowQuestionEvaluation')) {
+                                console.warn('题目列表API端点不存在，可能是网站API已更改');
+                                showNotification('题目列表API不可用，请检查网站是否更新', 'warning', 5000);
+                            }
+                            return;
+                        }
+                        
+                        if (this.status === 200) {
+                            const contentType = this.getResponseHeader('Content-Type');
+                            if (contentType && contentType.includes('application/json')) {
+                                try {
+                                    const response = JSON.parse(this.responseText);
+                                    handleResponse(response, this._url, toggleButton);
+                                } catch (jsonError) {
+                                    console.warn(`XHR JSON解析失败: ${jsonError.message} for ${this._url}`);
+                                    // 不抛出错误，允许原始响应继续处理
+                                }
+                            }
                         }
                     }
                 } catch (e) {
                     console.error('XHR处理异常:', e);
+                    // 不抛出错误，避免中断页面功能
                 }
             }, { passive: true });
 
@@ -2718,13 +2889,35 @@
 
     function handleResponse(response, url, toggleButton) {
         try {
+            // 检查响应是否有效
+            if (!response || typeof response !== 'object') {
+                console.warn('无效的API响应:', response);
+                return;
+            }
+            
             const fullUrl = new URL(url, window.location.origin);
 
             if (fullUrl.pathname.endsWith('GetKnowQuestionEvaluation')) {
                 console.groupCollapsed('%c题目列表API', 'color: #2196F3');
-                currentClassID = fullUrl.searchParams.get('classID');
+                
+                try {
+                    currentClassID = fullUrl.searchParams.get('classID');
 
-                if (response.success && Array.isArray(response.data)) {
+                    // 检查响应格式
+                    if (!response.success) {
+                        console.warn('API返回失败状态:', response);
+                        console.groupEnd();
+                        showNotification('获取题目列表失败，请检查页面状态', 'warning', 3000);
+                        return;
+                    }
+
+                    if (!Array.isArray(response.data)) {
+                        console.warn('API返回的数据格式不正确:', response.data);
+                        console.groupEnd();
+                        showNotification('题目数据格式异常，请刷新页面重试', 'warning', 3000);
+                        return;
+                    }
+
                     const newQuestionIds = new Set(response.data.map(q => q.QuestionID));
 
                     for (const qid of answerCache.keys()) {
@@ -2741,38 +2934,96 @@
                             .trim(),
                     }));
                     console.log('存储的题目数据:', storedQuestions);
+                } catch (processingError) {
+                    console.error('处理题目列表API响应时出错:', processingError);
+                    showNotification('处理题目数据时出错，请刷新页面重试', 'error', 3000);
+                } finally {
+                    console.groupEnd();
                 }
-                console.groupEnd();
+                
                 updateToggleButton(toggleButton);
             }
 
             if (fullUrl.pathname.endsWith('GetQuestionAnswerListByQID')) {
                 console.groupCollapsed('%c答案选项API', 'color: #FF5722');
-                if (response.success && Array.isArray(response.data)) {
+                
+                try {
+                    // 检查响应格式
+                    if (!response.success) {
+                        console.warn('答案API返回失败状态:', response);
+                        console.groupEnd();
+                        return;
+                    }
+
+                    if (!Array.isArray(response.data)) {
+                        console.warn('答案API返回的数据格式不正确:', response.data);
+                        console.groupEnd();
+                        return;
+                    }
+
                     const questionID = fullUrl.searchParams.get('questionID');
 
-                    if (storedQuestions.some(q => q.id === questionID)) {
-                        const options = response.data.map(opt => ({
-                            content: opt.oppentionContent
-                                .replace(/<[^>]+>/g, '')
-                                .replace(/&nbsp;/g, ' ')
-                                .trim(),
-                            isCorrect: opt.isTrue
-                        }));
-                        answerCache.set(questionID, options);
-                        console.log('存储的答案数据:', { questionID, options });
+                    if (!storedQuestions.some(q => q.id === questionID)) {
+                        console.warn('未找到对应的题目:', questionID);
+                        console.groupEnd();
+                        return;
                     }
+
+                    const options = response.data.map(opt => ({
+                        content: opt.oppentionContent
+                            .replace(/<[^>]+>/g, '')
+                            .replace(/&nbsp;/g, ' ')
+                            .trim(),
+                        isCorrect: opt.isTrue
+                    }));
+                    answerCache.set(questionID, options);
+                    console.log('存储的答案数据:', { questionID, options });
+                } catch (processingError) {
+                    console.error('处理答案选项API响应时出错:', processingError);
+                } finally {
+                    console.groupEnd();
                 }
-                console.groupEnd();
+                
                 updateToggleButton(toggleButton);
             }
         } catch (e) {
-            console.error('处理失败:', e);
+            console.error('处理API响应时发生严重错误:', e);
+            showNotification('处理数据时发生错误，部分功能可能受影响', 'error', 3000);
         }
     }
 
     // ========== 初始化 ==========
     function init() {
+        // 添加全局错误处理
+        window.addEventListener('error', (event) => {
+            // 过滤掉一些常见的非关键错误
+            if (event.message.includes('Script error') || 
+                event.message.includes('Non-Error promise rejection captured')) {
+                return;
+            }
+            
+            console.error('全局错误捕获:', event.error);
+            // 对于关键错误，可以添加用户通知
+            if (event.error && event.error.message && 
+                event.error.message.includes('GetKnowQuestionEvaluation')) {
+                showNotification('题目数据获取出现问题，请刷新页面重试', 'warning', 5000);
+            }
+        });
+        
+        // 添加未处理的Promise拒绝错误处理
+        window.addEventListener('unhandledrejection', (event) => {
+            // 过滤掉一些常见的非关键错误
+            if (event.reason && event.reason.message && 
+                (event.reason.message.includes('GetKnowQuestionEvaluation') ||
+                 event.reason.message.includes('Unexpected end of JSON input'))) {
+                console.warn('捕获API相关Promise拒绝:', event.reason);
+                event.preventDefault(); // 阻止默认的控制台错误输出
+                return;
+            }
+            
+            console.warn('未处理的Promise拒绝:', event.reason);
+        });
+        
         // 创建浮动按钮
         createFloatingButton();
         // 默认显示浮动按钮，因为控制面板默认是隐藏的
@@ -3679,90 +3930,43 @@
         }
         // 多选题处理
         else if (answerKey.length > 1 && isMultipleChoice) {
-            // 改进答案分割逻辑，正确处理分隔符
-            let keys = [];
-            // 尝试不同的分割方式
-            if (answerKey.includes('、') || answerKey.includes(',') || answerKey.includes('，')) {
-                // 如果包含分隔符，按分隔符分割
-                keys = answerKey.split(/[、,，]/).filter(k => k.trim());
-            } else {
-                // 如果没有分隔符，按字符分割
-                keys = answerKey.split('');
-            }
+            // 使用公共函数分割答案
+            const keys = splitAnswerKey(answerKey);
             
             for (const key of keys) {
-                const options = document.querySelectorAll('.an-item .option-answer');
+                // 使用公共函数查找选项
+                const options = findOptions();
                 for (const opt of options) {
                     const text = opt.textContent.trim();
                     // 匹配选项开头（A. 选项内容 → 匹配 "A"）
                     if (text.startsWith(key)) {
                         try {
-                            // 直接设置选中状态
-                            const input = opt.closest('.el-checkbox')?.querySelector('input[type="checkbox"]');
-                            if (input && !input.checked) {
-                                input.click();
-                                console.log(`✅ 已自动选择多选题选项: ${key}`);
-                                break; // 选中一个选项后跳出内层循环
-                            }
+                            // 使用公共函数点击选项
+                            const result = clickCheckboxOption(opt, key);
+                            if (result) break; // 选中一个选项后跳出内层循环
                         } catch (e) {
                             console.error('点击多选题选项失败:', e);
                         }
-                        }
                     }
                 }
-                
-                // 选项处理完成后，验证选项是否真正被勾选
-                setTimeout(() => {
-                    verifyOptionSelection(answerKey, false);
-                }, 500);
-            }
-        // 单选题处理
-        else {
-            // 改进答案分割逻辑，正确处理分隔符
-            let keys = [];
-            // 尝试不同的分割方式
-            if (answerKey.includes('、') || answerKey.includes(',') || answerKey.includes('，')) {
-                // 如果包含分隔符，按分隔符分割
-                keys = answerKey.split(/[、,，]/).filter(k => k.trim());
-            } else {
-                // 如果没有分隔符，按字符分割
-                keys = answerKey.split('');
             }
             
+            // 选项处理完成后，验证选项是否真正被勾选
+            setTimeout(() => {
+                verifyOptionSelection(answerKey, false);
+            }, 500);
+        }
+        // 单选题处理
+        else {
+            // 使用公共函数分割答案
+            const keys = splitAnswerKey(answerKey);
+            
             for (const key of keys) {
-                // 优先尝试多选题选项（兼容题目类型错误的情况）
-                let options = document.querySelectorAll('.an-item .option-answer');
-                let found = false;
-
-                for (const opt of options) {
-                    const text = opt.textContent.trim();
-                    // 匹配选项开头（A. 选项内容 → 匹配 "A"）
-                    if (text.startsWith(key)) {
-                        try {
-                            // 先尝试多选题选项
-                            let input = opt.closest('.el-checkbox')?.querySelector('input[type="checkbox"]');
-                            if (input && !input.checked) {
-                                input.click();
-                                console.log(`✅ 已自动选择选项(多选模式): ${key}`);
-                                found = true;
-                                break;
-                            }
-
-                            // 再尝试单选题选项
-                            input = opt.closest('.el-radio')?.querySelector('input[type="radio"]');
-                            if (input && !input.checked) {
-                                input.click();
-                                console.log(`✅ 已自动选择选项(单选模式): ${key}`);
-                                found = true;
-                                break;
-                            }
-                        } catch (e) {
-                            console.error('点击选项失败:', e);
-                        }
-                    }
+                // 使用公共函数选择选项
+                const result = selectOption(key, [], false);
+                if (result.success) {
+                    break; // 单选题只需要找到一个匹配的选项
                 }
-
-                if (found) break;
             }
         }
 
@@ -4046,6 +4250,12 @@
                     opt.classList.remove('selected');
                 });
                 option.classList.add('selected');
+            });
+
+            // 为整个div容器添加点击事件
+            option.addEventListener('click', () => {
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change'));
             });
 
             const label = document.createElement('label');
@@ -5252,11 +5462,40 @@
         window.fetch = async (...args) => {
             try {
                 const response = await originalFetch.apply(this, args);
-                handleResponse(await response.clone().json(), args[0], toggleButton);
+                
+                // 检查响应状态，特别是404错误
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        console.warn('API端点不存在:', args[0]);
+                        // 对于404错误，不抛出异常，只记录警告
+                        return response;
+                    }
+                    // 其他HTTP错误也记录但不抛出异常
+                    console.warn(`HTTP错误 ${response.status}:`, args[0]);
+                    return response;
+                }
+                
+                // 检查响应内容类型
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.warn('非JSON响应:', args[0], 'Content-Type:', contentType);
+                    return response;
+                }
+                
+                // 安全地解析JSON
+                try {
+                    const jsonData = await response.clone().json();
+                    handleResponse(jsonData, args[0], toggleButton);
+                } catch (jsonError) {
+                    console.warn('JSON解析失败:', args[0], jsonError.message);
+                    // 不抛出错误，避免中断页面功能
+                }
+                
                 return response;
             } catch (e) {
                 console.error('Fetch请求失败:', e);
-                throw e;
+                // 返回Promise.reject而不是抛出错误，保持与原生fetch行为一致
+                return Promise.reject(e);
             }
         };
     }
@@ -5273,11 +5512,33 @@
         XMLHttpRequest.prototype.send = function (...args) {
             this.addEventListener('load', () => {
                 try {
-                    if (this.readyState === 4 && this.status === 200) {
+                    // 检查响应状态
+                    if (this.readyState === 4) {
+                        if (this.status === 404) {
+                            console.warn('XHR API端点不存在:', this._url);
+                            // 对于404错误，不处理，只记录警告
+                            return;
+                        }
+                        
+                        if (this.status !== 200) {
+                            console.warn(`XHR HTTP错误 ${this.status}:`, this._url);
+                            return;
+                        }
+                        
+                        // 检查响应内容类型
                         const contentType = this.getResponseHeader('Content-Type');
-                        if (contentType && contentType.includes('application/json')) {
+                        if (!contentType || !contentType.includes('application/json')) {
+                            console.warn('XHR非JSON响应:', this._url, 'Content-Type:', contentType);
+                            return;
+                        }
+                        
+                        // 安全地解析JSON
+                        try {
                             const response = JSON.parse(this.responseText);
                             handleResponse(response, this._url, toggleButton);
+                        } catch (jsonError) {
+                            console.warn('XHR JSON解析失败:', this._url, jsonError.message);
+                            // 不抛出错误，避免中断页面功能
                         }
                     }
                 } catch (e) {
@@ -5346,6 +5607,33 @@
 
     // ========== 初始化 ==========
     function init() {
+        // 添加全局错误处理
+        window.addEventListener('error', function(event) {
+            // 过滤掉一些非关键错误
+            if (event.message && 
+                (event.message.includes('GetKnowQuestionEvaluation') || 
+                 event.message.includes('JSON') ||
+                 event.message.includes('404'))) {
+                console.warn('已过滤非关键错误:', event.message);
+                event.preventDefault();
+                return false;
+            }
+        });
+
+        // 添加未处理的Promise拒绝错误处理
+        window.addEventListener('unhandledrejection', function(event) {
+            // 过滤掉API相关的错误
+            if (event.reason && 
+                (event.reason.message && 
+                 (event.reason.message.includes('GetKnowQuestionEvaluation') || 
+                  event.reason.message.includes('JSON') ||
+                  event.reason.message.includes('404')))) {
+                console.warn('已过滤Promise拒绝错误:', event.reason.message);
+                event.preventDefault();
+                return false;
+            }
+        });
+
         // 创建浮动按钮
         createFloatingButton();
         // 默认显示浮动按钮，因为控制面板默认是隐藏的
