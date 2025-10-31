@@ -3504,12 +3504,17 @@
         fileInput.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 handleWordFiles(e.target.files);
+                // 确保文件列表容器和按钮组可见
+                fileListContainer.style.display = 'block';
+                batchActionsContainer.style.display = 'flex';
             }
         });
 
         // 清空列表按钮点击事件
         clearListButton.addEventListener('click', function() {
             window.wordFileList = [];
+            // 重置文件输入框的值，确保可以重新选择相同文件
+            fileInput.value = '';
             updateWordFileListDisplay();
             showWordStatus('文件列表已清空', 'info');
         });
@@ -3648,11 +3653,8 @@
             console.log('题库输入框:', kbInput);
 
             if (kbInput) {
-                // 如果输入框已有内容，添加分隔符
-                if (kbInput.value.trim()) {
-                    kbInput.value += '\n\n';
-                }
-                kbInput.value += content;
+                // 清除原有内容，直接设置新内容
+                kbInput.value = content;
 
                 // 触发input事件，确保内容被保存
                 const event = new Event('input', { bubbles: true });
@@ -3775,6 +3777,7 @@
         function updateWordFileListDisplay() {
             if (window.wordFileList.length === 0) {
                 fileListContainer.style.display = 'none';
+                batchActionsContainer.style.display = 'none';
                 clearListButton.style.display = 'none';
                 batchExtractButton.style.display = 'none';
                 extractButton.style.display = 'none';
@@ -3784,6 +3787,7 @@
 
             // 显示文件列表容器
             fileListContainer.style.display = 'block';
+            batchActionsContainer.style.display = 'flex';
             clearListButton.style.display = 'block';
             batchExtractButton.style.display = 'block';
             extractButton.style.display = 'none'; // 隐藏单文件提取按钮
