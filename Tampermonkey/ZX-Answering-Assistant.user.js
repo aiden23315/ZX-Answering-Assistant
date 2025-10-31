@@ -3297,7 +3297,7 @@
 
         // 清空列表按钮
         const clearListButton = document.createElement('button');
-        clearListButton.textContent = '清空列表';
+        clearListButton.textContent = '清空';
         clearListButton.style.cssText = `
             background-color: #f44336;
             color: white;
@@ -3515,8 +3515,16 @@
             window.wordFileList = [];
             // 重置文件输入框的值，确保可以重新选择相同文件
             fileInput.value = '';
+            // 清空结果区域
+            resultArea.textContent = '';
+            resultArea.style.display = 'none';
+            // 隐藏复制按钮
+            copyButton.style.display = 'none';
+            copyToClipboardButton.style.display = 'none';
+            // 重置提取内容
+            window.wordExtractedContent = '';
             updateWordFileListDisplay();
-            showWordStatus('文件列表已清空', 'info');
+            showWordStatus('已清空所有内容', 'info');
         });
 
         // 批量提取按钮点击事件
