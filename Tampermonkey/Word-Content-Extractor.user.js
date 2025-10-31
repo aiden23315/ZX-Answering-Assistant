@@ -77,44 +77,58 @@
     container.style.position = 'fixed';
     container.style.top = '10px';
     container.style.right = '10px';
-    container.style.width = '300px';
+    container.style.width = '400px';
+    container.style.maxWidth = '90vw';
+    container.style.maxHeight = '90vh';
+    container.style.minHeight = '300px';
     container.style.backgroundColor = '#fff';
-    container.style.border = '1px solid #ccc';
-    container.style.borderRadius = '5px';
-    container.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+    container.style.border = '1px solid #e0e0e0';
+    container.style.borderRadius = '8px';
+    container.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
     container.style.zIndex = '10000';
-    container.style.padding = '15px';
-    container.style.fontFamily = 'Arial, sans-serif';
+    container.style.padding = '20px';
+    container.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
     container.style.display = 'none';
+    container.style.transition = 'all 0.3s ease';
+    container.style.overflow = 'auto';
 
     // 创建标题
     const title = document.createElement('h3');
     title.textContent = 'Word文档内容提取器';
     title.style.marginTop = '0';
+    title.style.marginBottom = '20px';
     title.style.color = '#333';
-    title.style.fontSize = '16px';
+    title.style.fontSize = '18px';
     title.style.textAlign = 'center';
+    title.style.fontWeight = '600';
+    title.style.paddingBottom = '10px';
+    title.style.borderBottom = '1px solid #eee';
 
     // 创建文件上传区域
     const uploadArea = document.createElement('div');
     uploadArea.id = 'upload-area';
     uploadArea.style.border = '2px dashed #ccc';
-    uploadArea.style.borderRadius = '5px';
-    uploadArea.style.padding = '20px';
+    uploadArea.style.borderRadius = '8px';
+    uploadArea.style.padding = '25px 15px';
     uploadArea.style.textAlign = 'center';
-    uploadArea.style.marginBottom = '15px';
+    uploadArea.style.marginBottom = '20px';
     uploadArea.style.cursor = 'pointer';
-    uploadArea.style.transition = 'background-color 0.3s';
+    uploadArea.style.transition = 'all 0.3s ease';
+    uploadArea.style.backgroundColor = '#fafafa';
 
     // 添加拖拽悬停效果
     uploadArea.addEventListener('dragover', function(e) {
         e.preventDefault();
-        uploadArea.style.backgroundColor = '#f0f0f0';
+        uploadArea.style.backgroundColor = '#e8f4fd';
+        uploadArea.style.borderColor = '#2196F3';
+        uploadArea.style.transform = 'scale(1.02)';
     });
 
     uploadArea.addEventListener('dragleave', function(e) {
         e.preventDefault();
-        uploadArea.style.backgroundColor = '';
+        uploadArea.style.backgroundColor = '#fafafa';
+        uploadArea.style.borderColor = '#ccc';
+        uploadArea.style.transform = 'scale(1)';
     });
 
     // 文件输入元素
@@ -129,44 +143,52 @@
     const uploadText = document.createElement('p');
     uploadText.textContent = '点击或拖拽Word文档到此处（支持批量）';
     uploadText.style.margin = '0';
-    uploadText.style.color = '#666';
+    uploadText.style.color = '#555';
+    uploadText.style.fontSize = '14px';
+    uploadText.style.fontWeight = '500';
 
     // 文件列表容器
     const fileListContainer = document.createElement('div');
     fileListContainer.id = 'file-list-container';
-    fileListContainer.style.maxHeight = '150px';
+    fileListContainer.style.maxHeight = '30vh';
+    fileListContainer.style.minHeight = '100px';
     fileListContainer.style.overflowY = 'auto';
-    fileListContainer.style.marginBottom = '15px';
-    fileListContainer.style.border = '1px solid #ddd';
-    fileListContainer.style.borderRadius = '4px';
-    fileListContainer.style.padding = '5px';
+    fileListContainer.style.marginBottom = '20px';
+    fileListContainer.style.border = '1px solid #e0e0e0';
+    fileListContainer.style.borderRadius = '8px';
+    fileListContainer.style.padding = '10px';
     fileListContainer.style.display = 'none';
+    fileListContainer.style.backgroundColor = '#f9f9f9';
 
     // 文件列表标题
     const fileListTitle = document.createElement('div');
     fileListTitle.textContent = '文件列表：';
-    fileListTitle.style.fontWeight = 'bold';
-    fileListTitle.style.marginBottom = '5px';
-    fileListTitle.style.fontSize = '12px';
+    fileListTitle.style.fontWeight = '600';
+    fileListTitle.style.marginBottom = '8px';
+    fileListTitle.style.fontSize = '13px';
+    fileListTitle.style.color = '#333';
     fileListContainer.appendChild(fileListTitle);
 
     // 文件列表
     const fileList = document.createElement('div');
     fileList.id = 'file-list';
-    fileList.style.fontSize = '12px';
+    fileList.style.fontSize = '13px';
     fileListContainer.appendChild(fileList);
 
     // 批量操作按钮容器
     const batchActionsContainer = document.createElement('div');
     batchActionsContainer.style.display = 'flex';
     batchActionsContainer.style.justifyContent = 'space-between';
-    batchActionsContainer.style.marginBottom = '10px';
+    batchActionsContainer.style.alignItems = 'center';
+    batchActionsContainer.style.marginBottom = '15px';
+    batchActionsContainer.style.padding = '0 5px';
 
     // 全选/取消全选复选框
     const selectAllContainer = document.createElement('div');
     selectAllContainer.style.display = 'flex';
     selectAllContainer.style.alignItems = 'center';
-    selectAllContainer.style.fontSize = '12px';
+    selectAllContainer.style.fontSize = '13px';
+    selectAllContainer.style.cursor = 'pointer';
 
     const selectAllCheckbox = document.createElement('input');
     selectAllCheckbox.type = 'checkbox';
@@ -186,10 +208,13 @@
     clearListButton.style.backgroundColor = '#ff9800';
     clearListButton.style.color = 'white';
     clearListButton.style.border = 'none';
-    clearListButton.style.padding = '5px 10px';
-    clearListButton.style.borderRadius = '4px';
+    clearListButton.style.padding = '6px 12px';
+    clearListButton.style.borderRadius = '6px';
     clearListButton.style.cursor = 'pointer';
     clearListButton.style.fontSize = '12px';
+    clearListButton.style.fontWeight = '500';
+    clearListButton.style.transition = 'all 0.2s ease';
+    clearListButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
 
     batchActionsContainer.appendChild(selectAllContainer);
     batchActionsContainer.appendChild(clearListButton);
@@ -207,12 +232,16 @@
     extractButton.style.backgroundColor = '#4CAF50';
     extractButton.style.color = 'white';
     extractButton.style.border = 'none';
-    extractButton.style.padding = '8px 15px';
-    extractButton.style.borderRadius = '4px';
+    extractButton.style.padding = '10px 20px';
+    extractButton.style.borderRadius = '8px';
     extractButton.style.cursor = 'pointer';
     extractButton.style.width = '100%';
-    extractButton.style.marginBottom = '10px';
+    extractButton.style.marginBottom = '12px';
     extractButton.style.display = 'none';
+    extractButton.style.fontSize = '14px';
+    extractButton.style.fontWeight = '500';
+    extractButton.style.transition = 'all 0.2s ease';
+    extractButton.style.boxShadow = '0 3px 6px rgba(0,0,0,0.1)';
 
     // 批量提取按钮
     const batchExtractButton = document.createElement('button');
@@ -220,12 +249,16 @@
     batchExtractButton.style.backgroundColor = '#2196F3';
     batchExtractButton.style.color = 'white';
     batchExtractButton.style.border = 'none';
-    batchExtractButton.style.padding = '8px 15px';
-    batchExtractButton.style.borderRadius = '4px';
+    batchExtractButton.style.padding = '10px 20px';
+    batchExtractButton.style.borderRadius = '8px';
     batchExtractButton.style.cursor = 'pointer';
     batchExtractButton.style.width = '100%';
-    batchExtractButton.style.marginBottom = '10px';
+    batchExtractButton.style.marginBottom = '12px';
     batchExtractButton.style.display = 'none';
+    batchExtractButton.style.fontSize = '14px';
+    batchExtractButton.style.fontWeight = '500';
+    batchExtractButton.style.transition = 'all 0.2s ease';
+    batchExtractButton.style.boxShadow = '0 3px 6px rgba(0,0,0,0.1)';
 
     // 批量导出按钮
     const batchExportButton = document.createElement('button');
@@ -233,33 +266,43 @@
     batchExportButton.style.backgroundColor = '#9C27B0';
     batchExportButton.style.color = 'white';
     batchExportButton.style.border = 'none';
-    batchExportButton.style.padding = '8px 15px';
-    batchExportButton.style.borderRadius = '4px';
+    batchExportButton.style.padding = '10px 20px';
+    batchExportButton.style.borderRadius = '8px';
     batchExportButton.style.cursor = 'pointer';
     batchExportButton.style.width = '100%';
-    batchExportButton.style.marginBottom = '10px';
+    batchExportButton.style.marginBottom = '12px';
     batchExportButton.style.display = 'none';
+    batchExportButton.style.fontSize = '14px';
+    batchExportButton.style.fontWeight = '500';
+    batchExportButton.style.transition = 'all 0.2s ease';
+    batchExportButton.style.boxShadow = '0 3px 6px rgba(0,0,0,0.1)';
 
     // 进度条容器
     const progressContainer = document.createElement('div');
     progressContainer.id = 'progress-container';
-    progressContainer.style.marginBottom = '10px';
+    progressContainer.style.marginBottom = '15px';
     progressContainer.style.display = 'none';
+    progressContainer.style.backgroundColor = '#f5f5f5';
+    progressContainer.style.borderRadius = '8px';
+    progressContainer.style.padding = '10px';
 
     // 进度条
     const progressBar = document.createElement('div');
     progressBar.style.width = '100%';
-    progressBar.style.height = '10px';
+    progressBar.style.height = '12px';
     progressBar.style.backgroundColor = '#e0e0e0';
-    progressBar.style.borderRadius = '5px';
+    progressBar.style.borderRadius = '6px';
     progressBar.style.overflow = 'hidden';
+    progressBar.style.marginBottom = '8px';
 
     const progressFill = document.createElement('div');
     progressFill.id = 'progress-fill';
     progressFill.style.height = '100%';
     progressFill.style.backgroundColor = '#4CAF50';
     progressFill.style.width = '0%';
-    progressFill.style.transition = 'width 0.3s';
+    progressFill.style.transition = 'width 0.4s ease';
+    progressFill.style.borderRadius = '6px';
+    progressFill.style.background = 'linear-gradient(90deg, #4CAF50, #66BB6A)';
 
     progressBar.appendChild(progressFill);
     progressContainer.appendChild(progressBar);
@@ -267,25 +310,29 @@
     // 进度文本
     const progressText = document.createElement('div');
     progressText.id = 'progress-text';
-    progressText.style.fontSize = '12px';
+    progressText.style.fontSize = '13px';
     progressText.style.textAlign = 'center';
-    progressText.style.marginTop = '5px';
+    progressText.style.color = '#555';
+    progressText.style.fontWeight = '500';
     progressText.textContent = '0 / 0';
     progressContainer.appendChild(progressText);
 
     // 结果显示区域
     const resultArea = document.createElement('div');
     resultArea.id = 'result-area';
-    resultArea.style.border = '1px solid #ddd';
-    resultArea.style.borderRadius = '4px';
-    resultArea.style.padding = '10px';
-    resultArea.style.maxHeight = '200px';
+    resultArea.style.border = '1px solid #e0e0e0';
+    resultArea.style.borderRadius = '8px';
+    resultArea.style.padding = '15px';
+    resultArea.style.maxHeight = '40vh';
+    resultArea.style.minHeight = '150px';
     resultArea.style.overflowY = 'auto';
-    resultArea.style.fontSize = '12px';
-    resultArea.style.lineHeight = '1.4';
+    resultArea.style.fontSize = '13px';
+    resultArea.style.lineHeight = '1.5';
     resultArea.style.whiteSpace = 'pre-wrap';
     resultArea.style.wordBreak = 'break-word';
     resultArea.style.display = 'none';
+    resultArea.style.backgroundColor = '#f9f9f9';
+    resultArea.style.fontFamily = 'Consolas, Monaco, "Courier New", monospace';
 
     // 复制按钮
     const copyButton = document.createElement('button');
@@ -293,12 +340,16 @@
     copyButton.style.backgroundColor = '#2196F3';
     copyButton.style.color = 'white';
     copyButton.style.border = 'none';
-    copyButton.style.padding = '8px 15px';
-    copyButton.style.borderRadius = '4px';
+    copyButton.style.padding = '10px 20px';
+    copyButton.style.borderRadius = '8px';
     copyButton.style.cursor = 'pointer';
     copyButton.style.width = '100%';
-    copyButton.style.marginBottom = '10px';
+    copyButton.style.marginBottom = '12px';
     copyButton.style.display = 'none';
+    copyButton.style.fontSize = '14px';
+    copyButton.style.fontWeight = '500';
+    copyButton.style.transition = 'all 0.2s ease';
+    copyButton.style.boxShadow = '0 3px 6px rgba(0,0,0,0.1)';
 
     // 关闭按钮
     const closeButton = document.createElement('button');
@@ -306,18 +357,23 @@
     closeButton.style.backgroundColor = '#f44336';
     closeButton.style.color = 'white';
     closeButton.style.border = 'none';
-    closeButton.style.padding = '8px 15px';
-    closeButton.style.borderRadius = '4px';
+    closeButton.style.padding = '10px 20px';
+    closeButton.style.borderRadius = '8px';
     closeButton.style.cursor = 'pointer';
     closeButton.style.width = '100%';
+    closeButton.style.fontSize = '14px';
+    closeButton.style.fontWeight = '500';
+    closeButton.style.transition = 'all 0.2s ease';
+    closeButton.style.boxShadow = '0 3px 6px rgba(0,0,0,0.1)';
 
     // 状态提示
     const statusMessage = document.createElement('div');
     statusMessage.id = 'status-message';
-    statusMessage.style.marginTop = '10px';
-    statusMessage.style.fontSize = '12px';
+    statusMessage.style.marginTop = '12px';
+    statusMessage.style.fontSize = '13px';
     statusMessage.style.color = '#666';
     statusMessage.style.textAlign = 'center';
+    statusMessage.style.fontWeight = '500';
 
     // 组装UI
     uploadArea.appendChild(uploadText);
@@ -473,16 +529,23 @@
         
         window.uploadedFiles.forEach((fileObj, index) => {
             const fileItem = document.createElement('div');
-            fileItem.style.display = 'flex';
-            fileItem.style.alignItems = 'center';
-            fileItem.style.padding = '5px';
-            fileItem.style.borderBottom = '1px solid #eee';
+        fileItem.style.display = 'flex';
+        fileItem.style.justifyContent = 'space-between';
+        fileItem.style.alignItems = 'center';
+        fileItem.style.padding = '10px 12px';
+        fileItem.style.borderBottom = '1px solid #eee';
+        fileItem.style.fontSize = '13px';
+        fileItem.style.cursor = 'pointer';
+        fileItem.style.transition = 'background-color 0.2s ease';
+        fileItem.style.borderRadius = '6px';
+        fileItem.style.marginBottom = '4px';
             
             // 文件选择复选框
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = fileObj.selected;
             checkbox.style.marginRight = '8px';
+            checkbox.style.transform = 'scale(1.2)';
             checkbox.addEventListener('change', function() {
                 fileObj.selected = this.checked;
                 updateSelectAllCheckbox();
@@ -500,23 +563,40 @@
             const fileName = document.createElement('div');
             fileName.textContent = fileObj.name;
             fileName.style.fontWeight = 'bold';
+            fileName.style.flex = '1';
+            fileName.style.overflow = 'hidden';
+            fileName.style.textOverflow = 'ellipsis';
+            fileName.style.whiteSpace = 'nowrap';
+            fileName.style.fontSize = '13px';
+            fileName.style.color = '#333';
             
             // 文件大小
             const fileSize = document.createElement('div');
             fileSize.textContent = formatFileSize(fileObj.size);
             fileSize.style.color = '#666';
+            fileSize.style.fontSize = '12px';
+            fileSize.style.marginRight = '10px';
+            fileSize.style.minWidth = '50px';
+            fileSize.style.textAlign = 'right';
             
             // 状态指示器
             const status = document.createElement('div');
             status.style.fontSize = '10px';
             status.style.marginTop = '2px';
+            status.style.padding = '2px 6px';
+            status.style.borderRadius = '10px';
+            status.style.display = 'inline-block';
+            status.style.fontWeight = '500';
+            status.style.transition = 'all 0.3s ease';
             
             if (fileObj.extracted) {
                 status.textContent = '已提取';
                 status.style.color = '#4CAF50';
+                status.style.backgroundColor = '#e8f5e8';
             } else {
                 status.textContent = '待提取';
                 status.style.color = '#ff9800';
+                status.style.backgroundColor = '#fff3e0';
             }
             
             fileInfo.appendChild(fileName);
@@ -534,6 +614,28 @@
             deleteButton.style.height = '18px';
             deleteButton.style.cursor = 'pointer';
             deleteButton.style.marginLeft = '5px';
+            deleteButton.style.transition = 'all 0.2s ease';
+            deleteButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            // 文件项悬停效果
+            fileItem.addEventListener('mouseenter', () => {
+                fileItem.style.backgroundColor = '#f5f5f5';
+            });
+            
+            fileItem.addEventListener('mouseleave', () => {
+                fileItem.style.backgroundColor = 'transparent';
+            });
+            
+            // 删除按钮悬停效果
+            deleteButton.addEventListener('mouseenter', () => {
+                deleteButton.style.backgroundColor = '#d32f2f';
+                deleteButton.style.transform = 'scale(1.1)';
+            });
+            
+            deleteButton.addEventListener('mouseleave', () => {
+                deleteButton.style.backgroundColor = '#f44336';
+                deleteButton.style.transform = 'scale(1)';
+            });
+            
             deleteButton.addEventListener('click', function() {
                 window.uploadedFiles.splice(index, 1);
                 updateFileListDisplay();
@@ -614,6 +716,7 @@
         
         extractButton.disabled = true;
         extractButton.textContent = '提取中...';
+        showStatus('正在提取内容，请稍候...', 'loading');
         
         try {
             // 检查mammoth库
@@ -673,67 +776,236 @@
 
     // 提取Word文档内容
     function extractContent(file) {
-        // 检查mammoth库是否可用
-        if (!checkMammothLibrary()) {
-            showStatus('mammoth.js库尚未加载完成，请稍后再试', 'error');
-            return;
+        return new Promise((resolve, reject) => {
+            // 检查mammoth库是否可用
+            if (!checkMammothLibrary()) {
+                reject(new Error('mammoth.js库尚未加载完成，请稍后再试'));
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const arrayBuffer = e.target.result;
+                
+                try {
+                    // 使用mammoth.js提取内容
+                    mammoth.extractRawText({arrayBuffer: arrayBuffer})
+                        .then(function(result) {
+                            const text = result.value; // 提取的纯文本
+                            // 格式化提取的内容
+                            const formattedContent = formatExtractedContent(text);
+                            resolve(formattedContent);
+                        })
+                        .catch(function(error) {
+                            console.error('提取失败:', error);
+                            reject(new Error('提取失败: ' + error.message));
+                        });
+                } catch (error) {
+                    console.error('mammoth库错误:', error);
+                    reject(new Error('mammoth库错误: ' + error.message));
+                }
+            };
+            
+            reader.onerror = function() {
+                reject(new Error('文件读取失败'));
+            };
+            
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // 格式化提取的内容
+    function formatExtractedContent(text) {
+        // 按行分割文本
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+        
+        let formattedContent = '';
+        let currentQuestion = null;
+        let questionNumber = 0;
+        let inOptions = false;
+        let options = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            
+            // 检测题目标题（包含【】的内容）
+            if (line.includes('【') && line.includes('】') && !line.includes('答案')) {
+                // 如果之前有题目，先添加到结果中
+                if (currentQuestion) {
+                    formattedContent += formatQuestion(currentQuestion, questionNumber);
+                }
+                
+                // 开始新题目
+                questionNumber++;
+                currentQuestion = {
+                    title: line,
+                    options: [],
+                    answer: null
+                };
+                inOptions = false;
+                options = [];
+                continue;
+            }
+            
+            // 检测选项（以A.、B.、C.、D.开头）
+            if (/^[A-D]\./.test(line)) {
+                inOptions = true;
+                if (currentQuestion) {
+                    currentQuestion.options.push(line);
+                }
+                continue;
+            }
+            
+            // 检测答案（包含"答案："）
+            if (line.includes('答案：') || line.includes('答案:')) {
+                inOptions = false;
+                if (currentQuestion) {
+                    // 提取答案部分
+                    const answerMatch = line.match(/答案[：:]\s*(.+)/);
+                    if (answerMatch) {
+                        currentQuestion.answer = answerMatch[1];
+                    }
+                }
+                continue;
+            }
+            
+            // 如果在选项部分，且不是选项或答案，可能是题目的延续
+            if (inOptions && currentQuestion) {
+                // 检查是否是题目的延续（不包含选项格式）
+                if (!/^[A-D]\./.test(line) && !line.includes('答案：') && !line.includes('答案:')) {
+                    currentQuestion.title += ' ' + line;
+                }
+            }
         }
         
-        showStatus('正在提取内容，请稍候...', 'loading');
+        // 添加最后一个题目
+        if (currentQuestion) {
+            formattedContent += formatQuestion(currentQuestion, questionNumber);
+        }
         
-        const reader = new FileReader();
+        return formattedContent;
+    }
+
+    // 格式化单个题目
+    function formatQuestion(question, number) {
+        let formatted = '';
         
-        reader.onload = function(e) {
-            const arrayBuffer = e.target.result;
-            
-            try {
-                // 使用mammoth.js提取内容
-                mammoth.extractRawText({arrayBuffer: arrayBuffer})
-                    .then(function(result) {
-                        const text = result.value; // 提取的纯文本
-                        
-                        // 显示结果
-                        resultArea.textContent = text;
-                        resultArea.style.display = 'block';
-                        copyButton.style.display = 'block';
-                        
-                        showStatus('内容提取成功！', 'success');
-                    })
-                    .catch(function(error) {
-                        console.error('提取失败:', error);
-                        showStatus('提取失败: ' + error.message, 'error');
-                    });
-            } catch (error) {
-                console.error('mammoth库错误:', error);
-                showStatus('mammoth库错误: ' + error.message, 'error');
-            }
-        };
+        // 添加题目标题和编号
+        formatted += `${number}）\t${question.title}\n`;
         
-        reader.onerror = function() {
-            showStatus('文件读取失败', 'error');
-        };
+        // 添加选项
+        if (question.options && question.options.length > 0) {
+            question.options.forEach(option => {
+                formatted += `${option}\n`;
+            });
+        }
         
-        reader.readAsArrayBuffer(file);
+        // 添加答案
+        if (question.answer) {
+            formatted += `答案：${question.answer}\n`;
+        }
+        
+        // 添加空行分隔
+        formatted += '\n';
+        
+        return formatted;
     }
 
     // 显示状态消息
     function showStatus(message, type) {
-        statusMessage.textContent = message;
+        const statusElement = document.getElementById('status-message');
+        if (!statusElement) {
+            statusElement = statusMessage;
+        }
         
-        // 根据类型设置颜色
+        statusElement.textContent = message;
+        
+        // 根据消息类型设置颜色和样式
         switch(type) {
             case 'success':
-                statusMessage.style.color = '#4CAF50';
+                statusElement.style.color = '#4CAF50';
+                statusElement.style.fontWeight = '600';
+                statusElement.style.backgroundColor = '#e8f5e8';
+                statusElement.style.padding = '8px 12px';
+                statusElement.style.borderRadius = '6px';
                 break;
             case 'error':
-                statusMessage.style.color = '#f44336';
+                statusElement.style.color = '#f44336';
+                statusElement.style.fontWeight = '600';
+                statusElement.style.backgroundColor = '#ffebee';
+                statusElement.style.padding = '8px 12px';
+                statusElement.style.borderRadius = '6px';
+                break;
+            case 'warning':
+                statusElement.style.color = '#ff9800';
+                statusElement.style.fontWeight = '500';
+                statusElement.style.backgroundColor = '#fff3e0';
+                statusElement.style.padding = '8px 12px';
+                statusElement.style.borderRadius = '6px';
                 break;
             case 'loading':
-                statusMessage.style.color = '#2196F3';
+                statusElement.style.color = '#2196F3';
+                statusElement.style.fontWeight = '500';
+                statusElement.style.backgroundColor = '#e3f2fd';
+                statusElement.style.padding = '8px 12px';
+                statusElement.style.borderRadius = '6px';
                 break;
-            default:
-                statusMessage.style.color = '#666';
+            default: // info
+                statusElement.style.color = '#666';
+                statusElement.style.fontWeight = '500';
+                statusElement.style.backgroundColor = 'transparent';
+                statusElement.style.padding = '0';
         }
+        
+        // 添加过渡效果
+        statusElement.style.transition = 'all 0.3s ease';
+        
+        // 如果是成功或错误消息，3秒后恢复默认样式
+        if (type === 'success' || type === 'error') {
+            setTimeout(() => {
+                statusElement.style.color = '#666';
+                statusElement.style.fontWeight = '500';
+                statusElement.style.backgroundColor = 'transparent';
+                statusElement.style.padding = '0';
+            }, 3000);
+        }
+    }
+
+    // 显示结果区域
+    function showResult(content) {
+        const resultArea = document.getElementById('result-area');
+        const copyButton = document.getElementById('copy-button');
+        const closeButton = document.getElementById('close-button');
+        
+        if (!resultArea || !copyButton || !closeButton) return;
+        
+        resultArea.textContent = content;
+        resultArea.style.display = 'block';
+        copyButton.style.display = 'block';
+        closeButton.style.display = 'block';
+        
+        // 添加淡入动画
+        resultArea.style.opacity = '0';
+        resultArea.style.transform = 'translateY(10px)';
+        resultArea.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        
+        setTimeout(() => {
+            resultArea.style.opacity = '1';
+            resultArea.style.transform = 'translateY(0)';
+        }, 10);
+        
+        // 同样为按钮添加动画
+        [copyButton, closeButton].forEach((button, index) => {
+            button.style.opacity = '0';
+            button.style.transform = 'translateY(10px)';
+            button.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            
+            setTimeout(() => {
+                button.style.opacity = '1';
+                button.style.transform = 'translateY(0)';
+            }, 100 + (index * 50));
+        });
     }
 
     // 重置UI
@@ -746,8 +1018,18 @@
         copyButton.style.display = 'none';
         statusMessage.textContent = '';
         window.currentFile = null;
+        
+        // 重置批量模式相关UI
+        if (window.uploadedFiles) {
+            window.uploadedFiles = [];
+        }
+        fileListContainer.style.display = 'none';
+        batchActionsContainer.style.display = 'none';
+        batchExtractButton.style.display = 'none';
+        batchExportButton.style.display = 'none';
+        progressContainer.style.display = 'none';
     }
-
+    
     // 切换单文件/批量文件模式
     function switchToSingleFileMode() {
         // 隐藏批量操作
@@ -765,20 +1047,19 @@
             window.uploadedFiles = [];
         }
     }
-    
+
     function switchToBatchMode() {
         // 隐藏单文件操作
         fileInfo.style.display = 'none';
         extractButton.style.display = 'none';
-        resultContainer.style.display = 'none';
+        resultArea.style.display = 'none';
         copyButton.style.display = 'none';
-        downloadButton.style.display = 'none';
         
         // 显示批量操作
         fileListContainer.style.display = 'block';
         batchActionsContainer.style.display = 'flex';
     }
-
+    
     // 添加模式切换按钮
     const modeToggle = document.createElement('button');
     modeToggle.textContent = '切换到批量模式';
@@ -825,8 +1106,11 @@
         }
         
         // 显示文件信息
-        fileName.textContent = file.name;
-        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.innerHTML = `
+            <div><strong>文件名:</strong> ${file.name}</div>
+            <div><strong>大小:</strong> ${formatFileSize(file.size)}</div>
+            <div><strong>类型:</strong> ${file.type || '未知'}</div>
+        `;
         fileInfo.style.display = 'block';
         
         // 隐藏批量操作
@@ -866,80 +1150,138 @@
     });
 
     // 批量提取文件
-    async function batchExtractFiles(files) {
-        const totalFiles = files.length;
-        let completedFiles = 0;
-        let successFiles = 0;
-        let failedFiles = 0;
+    function batchExtractFiles(files) {
+        if (!files || files.length === 0) {
+            showStatus('没有可提取的文件', 'error');
+            return;
+        }
         
-        // 重置所有选中文件的提取状态
-        files.forEach(fileObj => {
-            fileObj.extracted = false;
-            fileObj.content = '';
-        });
+        let currentIndex = 0;
+        let globalQuestionNumber = 1; // 全局题目编号
+        let combinedContent = ''; // 拼接的内容
         
-        // 更新进度
-        updateProgress(0, totalFiles, '开始批量提取...');
+        updateProgress(0, files.length, '准备提取...');
         
-        // 逐个处理文件
-        for (let i = 0; i < files.length; i++) {
-            const fileObj = files[i];
-            
-            // 更新进度
-            updateProgress(i, totalFiles, `正在提取: ${fileObj.name}`);
-            
-            try {
-                // 检查mammoth库
-                if (!checkMammothLibrary()) {
-                    throw new Error('mammoth.js库未加载');
-                }
+        // 处理下一个文件
+        function processNextFile() {
+            if (currentIndex >= files.length) {
+                // 所有文件处理完成
+                updateProgress(files.length, files.length, '提取完成');
+                showStatus(`批量提取完成，共处理 ${files.length} 个文件`, 'success');
                 
-                // 读取文件
-                const content = await extractContent(fileObj.file);
+                // 显示拼接后的内容
+                resultArea.textContent = combinedContent;
+                resultArea.style.display = 'block';
                 
-                // 保存提取结果
-                fileObj.content = content;
-                fileObj.extracted = true;
-                successFiles++;
+                // 添加淡入动画
+                resultArea.style.opacity = '0';
+                resultArea.style.transform = 'translateY(10px)';
+                resultArea.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                 
-            } catch (error) {
-                console.error(`提取文件 ${fileObj.name} 失败:`, error);
-                fileObj.extracted = false;
-                fileObj.error = error.message;
-                failedFiles++;
+                setTimeout(() => {
+                    resultArea.style.opacity = '1';
+                    resultArea.style.transform = 'translateY(0)';
+                }, 10);
+                
+                // 显示复制按钮
+                copyButton.style.display = 'block';
+                
+                // 为复制按钮添加动画
+                copyButton.style.opacity = '0';
+                copyButton.style.transform = 'translateY(10px)';
+                copyButton.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                
+                setTimeout(() => {
+                    copyButton.style.opacity = '1';
+                    copyButton.style.transform = 'translateY(0)';
+                }, 100);
+                
+                // 显示导出按钮
+                batchExportButton.style.display = 'block';
+                
+                // 为导出按钮添加动画
+                batchExportButton.style.opacity = '0';
+                batchExportButton.style.transform = 'translateY(10px)';
+                batchExportButton.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                
+                setTimeout(() => {
+                    batchExportButton.style.opacity = '1';
+                    batchExportButton.style.transform = 'translateY(0)';
+                }, 200);
+                return;
             }
             
-            completedFiles++;
+            const fileObj = files[currentIndex];
+            updateProgress(currentIndex, files.length, `正在提取: ${fileObj.name}`);
             
-            // 更新进度
-            updateProgress(completedFiles, totalFiles, `已完成 ${completedFiles}/${totalFiles}`);
-            
-            // 更新文件列表显示
-            updateFileListDisplay();
+            // 提取当前文件
+            extractContent(fileObj.file)
+                .then(function(content) {
+                    // 保存提取的内容
+                    fileObj.content = content;
+                    fileObj.extracted = true;
+                    
+                    // 更新文件列表显示
+                    updateFileListDisplay();
+                    
+                    // 添加文件分隔符和文件名
+                    if (combinedContent) {
+                        combinedContent += '\n\n---\n\n';
+                    }
+                    combinedContent += `## 文件 ${currentIndex + 1}: ${fileObj.name}\n\n`;
+                    
+                    // 获取格式化内容并更新题目编号
+                    const formattedContent = updateQuestionNumbers(content, globalQuestionNumber);
+                    combinedContent += formattedContent;
+                    
+                    // 计算当前文件中的题目数量，更新全局编号
+                    const questionCount = countQuestionsInContent(formattedContent);
+                    globalQuestionNumber += questionCount;
+                    
+                    // 处理下一个文件
+                    currentIndex++;
+                    setTimeout(processNextFile, 100); // 短暂延迟，避免界面卡顿
+                })
+                .catch(function(error) {
+                    // 处理错误
+                    showStatus(`提取文件 ${fileObj.name} 失败: ${error}`, 'error');
+                    
+                    // 在拼接内容中添加错误信息
+                    if (combinedContent) {
+                        combinedContent += '\n\n---\n\n';
+                    }
+                    combinedContent += `## 文件 ${currentIndex + 1}: ${fileObj.name}\n\n`;
+                    combinedContent += `提取失败: ${error}\n\n`;
+                    
+                    // 继续处理下一个文件
+                    currentIndex++;
+                    setTimeout(processNextFile, 100);
+                });
         }
         
-        // 完成批量提取
-        updateProgress(totalFiles, totalFiles, `批量提取完成！成功: ${successFiles}, 失败: ${failedFiles}`);
-        
-        // 显示批量导出按钮
-        if (successFiles > 0) {
-            batchExportButton.style.display = 'block';
-        }
-        
-        // 显示完成消息
-        showStatus(`批量提取完成！成功: ${successFiles}, 失败: ${failedFiles}`, successFiles > 0 ? 'success' : 'error');
-        
-        // 3秒后隐藏进度条
-        setTimeout(() => {
-            progressContainer.style.display = 'none';
-        }, 3000);
+        // 开始处理
+        processNextFile();
     }
-
+    
     // 更新进度条
     function updateProgress(current, total, message) {
         const percentage = Math.round((current / total) * 100);
         progressBar.style.width = `${percentage}%`;
+        
+        // 添加动画效果
+        progressBar.style.transition = 'width 0.4s ease';
+        
+        // 更新进度文本，添加更详细的信息
         progressText.textContent = message || `${current}/${total} (${percentage}%)`;
+        
+        // 根据进度改变进度条颜色
+        if (percentage < 30) {
+            progressBar.style.background = 'linear-gradient(90deg, #ff9800, #ffb74d)';
+        } else if (percentage < 70) {
+            progressBar.style.background = 'linear-gradient(90deg, #2196F3, #64B5F6)';
+        } else {
+            progressBar.style.background = 'linear-gradient(90deg, #4CAF50, #66BB6A)';
+        }
     }
 
     // 批量导出按钮事件
@@ -959,6 +1301,7 @@
         
         // 创建导出内容
         let exportContent = '';
+        let globalQuestionNumber = 1; // 全局题目编号
         
         // 添加标题和时间戳
         exportContent += `# Word文档内容批量导出\n\n`;
@@ -970,9 +1313,18 @@
         extractedFiles.forEach((fileObj, index) => {
             exportContent += `## 文件 ${index + 1}: ${fileObj.name}\n\n`;
             exportContent += `文件大小: ${formatFileSize(fileObj.size)}\n\n`;
+            
+            // 获取格式化内容并更新题目编号
+            const formattedContent = updateQuestionNumbers(fileObj.content, globalQuestionNumber);
             exportContent += `提取内容:\n\n`;
-            exportContent += fileObj.content;
-            exportContent += '\n\n---\n\n';
+            exportContent += formattedContent;
+            exportContent += '\n\n';
+            
+            // 计算当前文件中的题目数量，更新全局编号
+            const questionCount = countQuestionsInContent(formattedContent);
+            globalQuestionNumber += questionCount;
+            
+            exportContent += `---\n\n`;
         });
         
         // 创建并下载文件
@@ -989,6 +1341,49 @@
         
         showStatus(`已导出 ${extractedFiles.length} 个文件的内容`, 'success');
     });
+    
+    // 更新题目编号
+    function updateQuestionNumbers(content, startNumber) {
+        // 按行分割内容
+        const lines = content.split('\n');
+        let currentNumber = startNumber;
+        let result = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            
+            // 检查是否是题目行（以数字）开头
+            const match = line.match(/^(\d+)）\s*(.+)/);
+            if (match) {
+                // 替换为新的编号
+                result.push(`${currentNumber}）\t${match[2]}`);
+                currentNumber++;
+            } else {
+                result.push(line);
+            }
+        }
+        
+        return result.join('\n');
+    }
+    
+    // 计算内容中的题目数量
+    function countQuestionsInContent(content) {
+        // 按行分割内容
+        const lines = content.split('\n');
+        let count = 0;
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            
+            // 检查是否是题目行（以数字）开头
+            const match = line.match(/^(\d+)）\s*(.+)/);
+            if (match) {
+                count++;
+            }
+        }
+        
+        return count;
+    }
 
     // 格式化文件大小
     function formatFileSize(bytes) {

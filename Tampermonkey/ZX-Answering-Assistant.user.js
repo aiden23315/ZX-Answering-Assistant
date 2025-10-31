@@ -217,24 +217,24 @@
     function normalize(str) {
         // 保存原始字符串，用于检测是否包含原始HTML实体
         const originalStr = str;
-        
+
         // 创建一个临时div元素来解析HTML实体编码
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = str;
         let decodedStr = tempDiv.textContent || tempDiv.innerText || str;
-        
+
         // 提取原文中的所有HTML实体
         const originalEntities = originalStr.match(/&[a-zA-Z]+;/g) || [];
-        
+
         // 提取解码后的所有HTML实体
         const decodedEntities = decodedStr.match(/&[a-zA-Z]+;/g) || [];
-        
+
         // 找出哪些实体在解码后仍然存在（这些很可能是原文中原本就有的）
         const persistentEntities = decodedEntities.filter(entity => originalEntities.includes(entity));
-        
+
         // 找出哪些实体在解码后消失了（这些很可能是后期提取过程中产生的）
         const extractedEntities = originalEntities.filter(entity => !decodedEntities.includes(entity));
-        
+
         // 如果没有原文实体，但解码后有实体，说明是后期提取过程中产生的，需要解码
         if (originalEntities.length === 0 && decodedEntities.length > 0) {
             // 解码所有HTML实体
@@ -257,13 +257,13 @@
         // 如果原文和解码后都有实体，需要精确处理
         else if (originalEntities.length > 0 && decodedEntities.length > 0) {
             // 混合情况：部分实体是原文的，部分是后期提取的
-            
+
             // 1. 先处理那些肯定是后期提取的实体（通过重新解码检测）
             // 创建一个临时字符串，只包含解码后的内容
             const tempDecoded = document.createElement('div');
             tempDecoded.innerHTML = decodedStr;
             const reDecodedStr = tempDecoded.textContent || tempDecoded.innerText || decodedStr;
-            
+
             // 如果重新解码还有变化，说明还有后期提取的实体
             if (reDecodedStr !== decodedStr) {
                 // 解码常见的后期提取实体（但保留编程相关的实体）
@@ -283,15 +283,15 @@
                     .replace(/&hellip;/g, '…')
                     .replace(/&middot;/g, '·');
             }
-            
+
             // 2. 检查是否是编程题目，如果是，保留编程相关的实体
             const isProgrammingQuestion = /代码|编程|javascript|js|html|css|python|java|c\+\+|sql|xml|json/i.test(decodedStr);
-            
+
             if (isProgrammingQuestion) {
                 // 如果是编程题目，只解码引号实体，其他保留
                 // 但需要先恢复那些被错误解码的编程实体
                 const programmingEntities = ['&lt;', '&gt;', '&amp;', '&quot;'];
-                
+
                 // 检查这些实体是否在原文中存在
                 for (const entity of programmingEntities) {
                     if (originalEntities.includes(entity)) {
@@ -302,20 +302,20 @@
                             '&amp;': '&',
                             '&quot;': '"'
                         }[entity];
-                        
+
                         // 将解码后的字符替换回实体编码
                         decodedStr = decodedStr.replace(new RegExp('\\' + replacement, 'g'), entity);
                     }
                 }
             }
-            
+
             // 所有选项处理完成后，验证选项是否真正被勾选
             setTimeout(() => {
                 verifyOptionSelection(answerKey, true);
             }, 500);
         }
         // 如果原文有实体，但解码后没有，说明已经完全解码，不需要额外处理
-        
+
         // 处理特殊符号和空白字符
         return decodedStr
             .replace(/\s+/g, '') // 合并空白字符
@@ -386,7 +386,7 @@
     // 选择选项（整合查找和点击逻辑）
     function selectOption(key, preferMultipleChoice = false) {
         const options = findOptions();
-        
+
         for (const opt of options) {
             const text = opt.textContent.trim();
             // 匹配选项开头（A. 选项内容 → 匹配 "A"）
@@ -399,7 +399,7 @@
                             logSelection('选择选项', key, '多选模式');
                             return true;
                         }
-                        
+
                         // 多选框失败，尝试单选框
                         if (clickRadioOption(opt, key)) {
                             logSelection('选择选项', key, '单选模式');
@@ -411,7 +411,7 @@
                             logSelection('选择选项', key, '单选模式');
                             return true;
                         }
-                        
+
                         // 单选框失败，尝试多选框
                         if (clickCheckboxOption(opt, key)) {
                             logSelection('选择选项', key, '多选模式');
@@ -423,7 +423,7 @@
                 }
             }
         }
-        
+
         return false;
     }
 
@@ -502,6 +502,31 @@
         document.body.appendChild(floatingBtn);
     }
 
+    // ========== 题库显示函数 ==========
+    function renderFullList() {
+        const panel = document.querySelector('#unified-control-panel');
+        if (!panel) return;
+
+        const countEl = panel.querySelector('#kb-count');
+        const listEl = panel.querySelector('#kb-full-list');
+        const count = Object.keys(KNOWLEDGE_BASE).length;
+        countEl.textContent = `✅ 成功解析 ${count} 道题`;
+
+        if (count === 0) {
+            listEl.innerHTML = '<i style="color:#999;">未识别到有效题目，请检查格式</i>';
+            return;
+        }
+
+        let html = '<ul style="padding-left:16px; margin:0; font-size:12px; line-height:1.6;">';
+        Object.entries(KNOWLEDGE_BASE).forEach(([q, a]) => {
+            // 保留代码块显示
+            const displayQ = q.replace(/`/g, '<code>').replace(/`/g, '</code>');
+            html += `<li><strong style="color:#409eff;">${a}</strong> ${displayQ}</li>`;
+        });
+        html += '</ul>';
+        listEl.innerHTML = html;
+    }
+
     // ========== 创建统一的控制面板 ==========
     function createUnifiedControlPanel() {
         // 检查是否已存在面板
@@ -542,6 +567,7 @@
             <div id="tab-content" style="padding:12px; overflow:auto; max-height:400px;">
                 <!-- 答题助手标签页内容 -->
                 <div id="answer-tab" class="tab-pane">
+                    <button id="upload-word-btn" style="width:100%; padding:8px; background:#FF9800; color:white; border:none; border-radius:4px; margin-bottom:8px; font-weight:500;">📄 上传Word文档</button>
                     <textarea id="kb-input" placeholder="粘贴题库文本（支持足下教育标准格式）" style="width:100%; height:100px; margin-bottom:8px; padding:6px; border:1px solid #ccc; border-radius:4px; font-family:monospace; font-size:13px;"></textarea>
                     <button id="parse-btn" style="width:100%; padding:6px; background:#409eff; color:white; border:none; border-radius:4px; margin-bottom:8px;">✅ 解析题库</button>
                     <button id="manual-auto-select-btn" style="width:100%; padding:8px; background:#9C27B0; color:white; border:none; border-radius:4px; margin-bottom:8px; position:relative; overflow:hidden; transition:all 0.3s ease; box-shadow:0 2px 5px rgba(156,39,176,0.3);">🎯 手动触发自动选择</button>
@@ -622,6 +648,10 @@
         });
 
         // 答题助手相关事件
+        panel.querySelector('#upload-word-btn').onclick = () => {
+            showWordExtractorDialog();
+        };
+
         panel.querySelector('#parse-btn').onclick = () => {
             const raw = panel.querySelector('#kb-input').value;
             if (!raw.trim()) return;
@@ -642,33 +672,33 @@
             setTimeout(() => {
                 this.classList.remove('ripple');
             }, 600);
-            
+
             // 添加点击动画效果
             this.style.transform = 'scale(0.95)';
             this.style.boxShadow = '0 1px 3px rgba(156,39,176,0.5)';
-            
+
             setTimeout(() => {
                 this.style.transform = 'scale(1)';
                 this.style.boxShadow = '0 2px 5px rgba(156,39,176,0.3)';
             }, 150);
-            
+
             // 检查当前页面是否有题目
             const titleEl = document.querySelector('.question-title');
             if (!titleEl) {
                 showNotification('当前页面没有检测到题目，请先进入答题页面', 'warning');
                 return;
             }
-            
+
             const qText = titleEl.textContent.trim();
             if (!qText) {
                 showNotification('无法获取题目内容，请刷新页面后重试', 'warning');
                 return;
             }
-            
+
             // 查找匹配的答案 - 使用三轮匹配策略
             let matchedQ = null, ans = null;
             const normQ = normalize(qText);
-            
+
             // 第一轮：标准化匹配（原逻辑）
             for (const [q, a] of Object.entries(KNOWLEDGE_BASE)) {
                 const normKB = normalize(q);
@@ -678,7 +708,7 @@
                     break;
                 }
             }
-            
+
             // 第二轮：HTML实体解码后的匹配
             if (!ans && qText.includes('&')) {
                 const decodedQ = qText.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
@@ -692,7 +722,7 @@
                     }
                 }
             }
-            
+
             // 第三轮：题库题目HTML实体解码匹配
             if (!ans) {
                 for (const [q, a] of Object.entries(KNOWLEDGE_BASE)) {
@@ -705,7 +735,7 @@
                     }
                 }
             }
-            
+
             if (ans) {
                 // 显示确认对话框
                 showModal(qText, matchedQ, ans);
@@ -728,39 +758,39 @@
                 showNotification('没有提取到题目，请先提取题目', 'error');
                 return;
             }
-            
+
             // 检查是否所有题目都有答案
             const validQuestionIds = new Set(storedQuestions.map(q => q.id));
             const filteredCache = Array.from(answerCache.entries()).filter(
                 ([qid]) => validQuestionIds.has(qid)
             );
-            
+
             const total = storedQuestions.length;
             const completed = filteredCache.reduce((count, [qid, opts]) => {
                 return count + (opts.length > 0 ? 1 : 0);
             }, 0);
-            
+
             if (completed < total) {
                 showNotification(`还有 ${total - completed} 道题目未提取答案，请先完成答案提取`, 'warning');
                 return;
             }
-            
+
             // 格式化题目为知识库格式
             const formattedQuestions = formatQuestionsToKnowledgeBase();
-            
+
             // 写入到kb-input和knowledge_base_raw
             const kbInput = panel.querySelector('#kb-input');
             kbInput.value = formattedQuestions;
             GM_setValue('knowledge_base_raw', formattedQuestions);
-            
+
             // 解析题库
             KNOWLEDGE_BASE = parseRawText(formattedQuestions);
             renderFullList();
-            
+
             // 切换到答题助手标签页
             const answerTab = panel.querySelector('[data-tab="answer"]');
             answerTab.click();
-            
+
             showNotification(`已成功应用 ${total} 道题目到知识库`, 'success');
         };
 
@@ -774,27 +804,6 @@
             panel.querySelector('#kb-input').value = saved;
             KNOWLEDGE_BASE = parseRawText(saved);
             renderFullList();
-        }
-
-        function renderFullList() {
-            const countEl = panel.querySelector('#kb-count');
-            const listEl = panel.querySelector('#kb-full-list');
-            const count = Object.keys(KNOWLEDGE_BASE).length;
-            countEl.textContent = `✅ 成功解析 ${count} 道题`;
-
-            if (count === 0) {
-                listEl.innerHTML = '<i style="color:#999;">未识别到有效题目，请检查格式</i>';
-                return;
-            }
-
-            let html = '<ul style="padding-left:16px; margin:0; font-size:12px; line-height:1.6;">';
-            Object.entries(KNOWLEDGE_BASE).forEach(([q, a]) => {
-                // 保留代码块显示
-                const displayQ = q.replace(/`/g, '<code>').replace(/`/g, '</code>');
-                html += `<li><strong style="color:#409eff;">${a}</strong> ${displayQ}</li>`;
-            });
-            html += '</ul>';
-            listEl.innerHTML = html;
         }
 
         // 更新题目提取状态
@@ -944,12 +953,12 @@
             // 使用公共函数分割答案
             const keys = splitAnswerKey(answerKey);
             expectedSelections = keys.length;
-            
+
             // 使用async/await处理多选题选项选择，确保每个选项都有足够时间被选中
             const processMultiChoiceOption = async (key) => {
                 const options = findOptions();
                 let found = false;
-                
+
                 for (const opt of options) {
                     const text = opt.textContent.trim();
                     // 匹配选项开头（A. 选项内容 → 匹配 "A"）
@@ -963,7 +972,7 @@
                                     success: true,
                                     description: '多选题选项'
                                 });
-                                
+
                                 // 添加延迟，确保选项被正确选中
                                 await new Promise(resolve => setTimeout(resolve, 300));
                                 return true; // 选中成功
@@ -988,7 +997,7 @@
                         }
                     }
                 }
-                
+
                 if (!found) {
                     selectionResults.push({
                         key: key,
@@ -999,13 +1008,13 @@
                 }
                 return false;
             };
-            
+
             // 顺序处理每个选项，确保前一个选项完全选中后再处理下一个
             (async () => {
                 for (const key of keys) {
                     await processMultiChoiceOption(key);
                 }
-                
+
                 // 所有选项处理完成后，验证选项是否真正被勾选
                 setTimeout(() => {
                     verifyOptionSelection(answerKey, true);
@@ -1017,7 +1026,7 @@
             // 使用公共函数分割答案
             const keys = splitAnswerKey(answerKey);
             expectedSelections = 1;
-            
+
             // 尝试选择第一个匹配的选项
             for (const key of keys) {
                 const result = selectOption(key, selectionResults, false);
@@ -1025,7 +1034,7 @@
                     break; // 单选题只需要找到一个匹配的选项
                 }
             }
-            
+
             // 选项处理完成后，验证选项是否真正被勾选
             setTimeout(() => {
                 verifyOptionSelection(answerKey, false);
@@ -1036,7 +1045,7 @@
         setTimeout(() => {
             const successfulSelections = selectionResults.filter(r => r.success).length;
             const failedSelections = selectionResults.filter(r => !r.success);
-            
+
             if (successfulSelections === expectedSelections) {
                 // 全部选择成功
                 showNotification(`已成功选择答案: ${answerKey}`, 'success', 3000);
@@ -1048,7 +1057,7 @@
                 // 全部选择失败
                 const errorMessages = failedSelections.map(r => `${r.key}: ${r.error}`).join(', ');
                 showNotification(`无法自动选择答案，请手动选择正确答案: ${answerKey}`, 'error', 8000);
-                
+
                 // 创建一个更显眼的提示框，显示正确答案
                 const answerHint = document.createElement('div');
                 answerHint.style.cssText = `
@@ -1068,7 +1077,7 @@
                     animation: answerHintPulse 1.5s infinite;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
                 `;
-                
+
                 // 添加动画样式
                 const style = document.createElement('style');
                 style.textContent = `
@@ -1079,20 +1088,20 @@
                     }
                 `;
                 document.head.appendChild(style);
-                
+
                 answerHint.innerHTML = `
                     <div style="margin-bottom: 10px;">请手动选择正确答案</div>
                     <div style="font-size: 24px; letter-spacing: 5px;">${answerKey}</div>
                     <div style="margin-top: 15px; font-size: 14px; opacity: 0.9;">点击此提示框关闭</div>
                 `;
-                
+
                 document.body.appendChild(answerHint);
-                
+
                 // 点击提示框关闭
                 answerHint.addEventListener('click', function() {
                     document.body.removeChild(answerHint);
                 });
-                
+
                 // 10秒后自动关闭
                 setTimeout(() => {
                     if (document.body.contains(answerHint)) {
@@ -1132,7 +1141,7 @@
 
                     let matchedQ = null, ans = null;
                     const normQ = normalize(qText);
-                    
+
                     // 第一轮：标准化匹配
                     for (const [q, a] of Object.entries(KNOWLEDGE_BASE)) {
                         const normKB = normalize(q);
@@ -1143,20 +1152,20 @@
                             break;
                         }
                     }
-                    
+
                     // 第二轮：如果第一轮未匹配，尝试HTML实体解码后的匹配
                     if (!ans && qText.includes('&')) {
                         // 创建一个临时div元素来解码HTML实体
                         const tempDiv = document.createElement('div');
                         tempDiv.innerHTML = qText;
                         const decodedQText = tempDiv.textContent || tempDiv.innerText || qText;
-                        
+
                         if (decodedQText !== qText) {
                             const normDecodedQ = normalize(decodedQText);
-                            
+
                             for (const [q, a] of Object.entries(KNOWLEDGE_BASE)) {
                                 const normKB = normalize(q);
-                                
+
                                 if (normDecodedQ.includes(normKB) || normKB.includes(normDecodedQ)) {
                                     matchedQ = q;
                                     ans = a;
@@ -1166,7 +1175,7 @@
                             }
                         }
                     }
-                    
+
                     // 第三轮：尝试对题库中的题目也进行HTML实体解码匹配
                     if (!ans) {
                         for (const [q, a] of Object.entries(KNOWLEDGE_BASE)) {
@@ -1174,10 +1183,10 @@
                                 const tempDiv = document.createElement('div');
                                 tempDiv.innerHTML = q;
                                 const decodedQ = tempDiv.textContent || tempDiv.innerText || q;
-                                
+
                                 if (decodedQ !== q) {
                                     const normDecodedQ = normalize(decodedQ);
-                                    
+
                                     if (normQ.includes(normDecodedQ) || normDecodedQ.includes(normQ)) {
                                         matchedQ = q;
                                         ans = a;
@@ -1243,49 +1252,49 @@
         // 使用公共函数分割答案
         const keys = splitAnswerKey(answerKey);
         const notSelectedKeys = [];
-        
+
         for (const key of keys) {
             let found = false;
             let isSelected = false;
-            
+
             // 使用公共函数查找选项
             const options = findOptions();
             for (const opt of options) {
                 const text = opt.textContent.trim();
                 if (text.startsWith(key)) {
                     found = true;
-                    
+
                     // 检查多选题选项是否被选中
                     const checkboxInput = opt.closest('.el-checkbox')?.querySelector('input[type="checkbox"]');
                     if (checkboxInput && checkboxInput.checked) {
                         isSelected = true;
                         break;
                     }
-                    
+
                     // 检查单选题选项是否被选中
                     const radioInput = opt.closest('.el-radio')?.querySelector('input[type="radio"]');
                     if (radioInput && radioInput.checked) {
                         isSelected = true;
                         break;
                     }
-                    
+
                     break;
                 }
             }
-            
+
             if (found && !isSelected) {
                 notSelectedKeys.push(key);
             }
         }
-        
+
         // 如果有未被选中的选项，显示提示
         if (notSelectedKeys.length > 0) {
-            const message = isMultipleChoice 
+            const message = isMultipleChoice
                 ? `以下多选题选项未被正确勾选，请手动检查：${notSelectedKeys.join('、')}`
                 : `答案选项未被正确勾选，请手动检查：${notSelectedKeys.join('、')}`;
-            
+
             showNotification(message, 'warning', 5000);
-            
+
             // 对于多选题，创建更显眼的提示框
             if (isMultipleChoice && notSelectedKeys.length > 0) {
                 const answerHint = document.createElement('div');
@@ -1306,7 +1315,7 @@
                     animation: answerHintPulse 1.5s infinite;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
                 `;
-                
+
                 // 添加动画样式
                 const style = document.createElement('style');
                 style.textContent = `
@@ -1317,20 +1326,20 @@
                     }
                 `;
                 document.head.appendChild(style);
-                
+
                 answerHint.innerHTML = `
                     <div style="margin-bottom: 10px;">多选题选项未被正确勾选</div>
                     <div style="font-size: 24px; letter-spacing: 5px;">${notSelectedKeys.join('、')}</div>
                     <div style="margin-top: 15px; font-size: 14px; opacity: 0.9;">点击此提示框关闭</div>
                 `;
-                
+
                 document.body.appendChild(answerHint);
-                
+
                 // 点击提示框关闭
                 answerHint.addEventListener('click', function() {
                     document.body.removeChild(answerHint);
                 });
-                
+
                 // 5秒后自动关闭
                 setTimeout(() => {
                     if (document.body.contains(answerHint)) {
@@ -1338,10 +1347,10 @@
                     }
                 }, 5000);
             }
-            
+
             return false;
         }
-        
+
         return true;
     }
 
@@ -2377,13 +2386,13 @@
                         if (!response.ok) {
                             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                         }
-                        
+
                         // 检查响应内容类型
                         const contentType = response.headers.get('content-type');
                         if (!contentType || !contentType.includes('application/json')) {
                             throw new Error('响应不是有效的JSON格式');
                         }
-                        
+
                         return response.json();
                     })
                     .then(data => {
@@ -2580,7 +2589,7 @@
             return count + (opts.length > 0 ? 1 : 0);
         }, 0);
 
-        const message = total > 0 
+        const message = total > 0
             ? `题目提取完成！共提取 ${total} 道题目，已完成 ${completed} 道答案提取。`
             : '题目提取完成！';
 
@@ -2602,18 +2611,18 @@
                 position: relative !important;
                 overflow: hidden !important;
             }
-            
+
             #manual-auto-select-btn:hover {
                 background: linear-gradient(135deg, #8E24AA, #6A1B9A) !important;
                 transform: translateY(-2px) !important;
                 box-shadow: 0 4px 8px rgba(156,39,176,0.4) !important;
             }
-            
+
             #manual-auto-select-btn:active {
                 transform: translateY(0) !important;
                 box-shadow: 0 2px 4px rgba(156,39,176,0.4) !important;
             }
-            
+
             #manual-auto-select-btn::before {
                 content: "" !important;
                 position: absolute !important;
@@ -2626,7 +2635,7 @@
                 transform: translate(-50%, -50%) !important;
                 transition: width 0.6s, height 0.6s !important;
             }
-            
+
             #manual-auto-select-btn.ripple::before {
                 width: 300px !important;
                 height: 300px !important;
@@ -2807,7 +2816,7 @@
         window.fetch = async (...args) => {
             try {
                 const response = await originalFetch.apply(this, args);
-                
+
                 // 检查响应状态
                 if (!response.ok) {
                     console.warn(`API请求失败: ${response.status} ${response.statusText} for ${args[0]}`);
@@ -2821,7 +2830,7 @@
                     }
                     return response;
                 }
-                
+
                 // 安全地尝试解析JSON
                 try {
                     const clonedResponse = response.clone();
@@ -2831,7 +2840,7 @@
                     console.warn(`JSON解析失败: ${jsonError.message} for ${args[0]}`);
                     // 不抛出错误，允许原始响应继续处理
                 }
-                
+
                 return response;
             } catch (e) {
                 console.error('Fetch请求失败:', e);
@@ -2863,7 +2872,7 @@
                             }
                             return;
                         }
-                        
+
                         if (this.status === 200) {
                             const contentType = this.getResponseHeader('Content-Type');
                             if (contentType && contentType.includes('application/json')) {
@@ -2894,12 +2903,12 @@
                 console.warn('无效的API响应:', response);
                 return;
             }
-            
+
             const fullUrl = new URL(url, window.location.origin);
 
             if (fullUrl.pathname.endsWith('GetKnowQuestionEvaluation')) {
                 console.groupCollapsed('%c题目列表API', 'color: #2196F3');
-                
+
                 try {
                     currentClassID = fullUrl.searchParams.get('classID');
 
@@ -2940,13 +2949,13 @@
                 } finally {
                     console.groupEnd();
                 }
-                
+
                 updateToggleButton(toggleButton);
             }
 
             if (fullUrl.pathname.endsWith('GetQuestionAnswerListByQID')) {
                 console.groupCollapsed('%c答案选项API', 'color: #FF5722');
-                
+
                 try {
                     // 检查响应格式
                     if (!response.success) {
@@ -2983,7 +2992,7 @@
                 } finally {
                     console.groupEnd();
                 }
-                
+
                 updateToggleButton(toggleButton);
             }
         } catch (e) {
@@ -2997,33 +3006,33 @@
         // 添加全局错误处理
         window.addEventListener('error', (event) => {
             // 过滤掉一些常见的非关键错误
-            if (event.message.includes('Script error') || 
+            if (event.message.includes('Script error') ||
                 event.message.includes('Non-Error promise rejection captured')) {
                 return;
             }
-            
+
             console.error('全局错误捕获:', event.error);
             // 对于关键错误，可以添加用户通知
-            if (event.error && event.error.message && 
+            if (event.error && event.error.message &&
                 event.error.message.includes('GetKnowQuestionEvaluation')) {
                 showNotification('题目数据获取出现问题，请刷新页面重试', 'warning', 5000);
             }
         });
-        
+
         // 添加未处理的Promise拒绝错误处理
         window.addEventListener('unhandledrejection', (event) => {
             // 过滤掉一些常见的非关键错误
-            if (event.reason && event.reason.message && 
+            if (event.reason && event.reason.message &&
                 (event.reason.message.includes('GetKnowQuestionEvaluation') ||
                  event.reason.message.includes('Unexpected end of JSON input'))) {
                 console.warn('捕获API相关Promise拒绝:', event.reason);
                 event.preventDefault(); // 阻止默认的控制台错误输出
                 return;
             }
-            
+
             console.warn('未处理的Promise拒绝:', event.reason);
         });
-        
+
         // 创建浮动按钮
         createFloatingButton();
         // 默认显示浮动按钮，因为控制面板默认是隐藏的
@@ -3079,6 +3088,1181 @@
                 }, 1500);
             });
         }
+    }
+
+    // ========== Word文档提取功能 ==========
+
+    // 检查mammoth库是否已加载
+    function checkMammothLibrary() {
+        if (typeof mammoth === 'undefined') {
+            // 动态加载mammoth库
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+            script.onload = function() {
+                console.log('mammoth.js库加载成功');
+            };
+            script.onerror = function() {
+                console.error('mammoth.js库加载失败，尝试备用CDN...');
+                // 尝试备用CDN
+                loadMammothFromBackup();
+            };
+            document.head.appendChild(script);
+
+            return false;
+        }
+        return true;
+    }
+
+    // 从备用CDN加载mammoth库
+    function loadMammothFromBackup() {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js';
+        script.onload = function() {
+            console.log('mammoth.js库从备用CDN加载成功');
+        };
+        script.onerror = function() {
+            console.error('所有CDN加载失败，请检查网络连接');
+        };
+        document.head.appendChild(script);
+    }
+
+    // 显示Word文档提取对话框
+    function showWordExtractorDialog() {
+        // 检查是否已存在对话框
+        let dialog = document.getElementById('word-extractor-dialog');
+        if (dialog) {
+            dialog.style.display = 'block';
+            return;
+        }
+
+        // 初始化文件列表
+        window.wordFileList = [];
+        window.wordExtractedContent = ''; // 存储提取的内容
+
+        // 创建对话框容器
+        dialog = document.createElement('div');
+        dialog.id = 'word-extractor-dialog';
+        dialog.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2147483647;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        `;
+
+        // 创建对话框内容
+        const dialogContent = document.createElement('div');
+        dialogContent.style.cssText = `
+            background-color: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow: auto;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: relative;
+        `;
+
+        // 创建标题
+        const title = document.createElement('h3');
+        title.textContent = 'Word文档内容提取器';
+        title.style.cssText = `
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 18px;
+            text-align: center;
+            font-weight: 600;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        `;
+
+        // 创建关闭按钮
+        const closeButton = document.createElement('button');
+        closeButton.textContent = '×';
+        closeButton.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        `;
+        closeButton.onclick = function() {
+            dialog.style.display = 'none';
+        };
+
+        // 创建文件上传区域
+        const uploadArea = document.createElement('div');
+        uploadArea.id = 'word-upload-area';
+        uploadArea.style.cssText = `
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 25px 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+        `;
+
+        // 添加拖拽悬停效果
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#e8f4fd';
+            uploadArea.style.borderColor = '#2196F3';
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#fafafa';
+            uploadArea.style.borderColor = '#ccc';
+        });
+
+        // 文件输入元素
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.docx,.doc';
+        fileInput.multiple = true; // 支持多文件选择
+        fileInput.style.display = 'none';
+
+        // 上传提示文本
+        const uploadText = document.createElement('p');
+        uploadText.textContent = '点击或拖拽Word文档到此处（支持批量上传）';
+        uploadText.style.cssText = `
+            margin: 0;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        `;
+
+        // 文件信息显示
+        const fileInfo = document.createElement('div');
+        fileInfo.id = 'word-file-info';
+        fileInfo.style.cssText = `
+            margin-bottom: 15px;
+            font-size: 12px;
+            color: #666;
+            display: none;
+        `;
+
+        // 文件列表容器
+        const fileListContainer = document.createElement('div');
+        fileListContainer.id = 'word-file-list-container';
+        fileListContainer.style.cssText = `
+            margin-bottom: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        `;
+
+        // 文件列表标题
+        const fileListTitle = document.createElement('div');
+        fileListTitle.textContent = '已选择文件列表：';
+        fileListTitle.style.cssText = `
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 13px;
+        `;
+
+        // 文件列表
+        const fileList = document.createElement('div');
+        fileList.id = 'word-file-list';
+        fileList.style.cssText = `
+            font-size: 12px;
+            color: #555;
+        `;
+
+        // 批量操作按钮容器
+        const batchActionsContainer = document.createElement('div');
+        batchActionsContainer.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            gap: 10px;
+        `;
+
+        // 清空列表按钮
+        const clearListButton = document.createElement('button');
+        clearListButton.textContent = '清空列表';
+        clearListButton.style.cssText = `
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            flex: 1;
+            display: none;
+        `;
+
+        // 批量提取按钮
+        const batchExtractButton = document.createElement('button');
+        batchExtractButton.textContent = '批量提取';
+        batchExtractButton.style.cssText = `
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            flex: 1;
+            display: none;
+        `;
+
+        // 进度条容器
+        const progressContainer = document.createElement('div');
+        progressContainer.id = 'word-progress-container';
+        progressContainer.style.cssText = `
+            margin-bottom: 15px;
+            display: none;
+        `;
+
+        // 进度条
+        const progressBar = document.createElement('div');
+        progressBar.style.cssText = `
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        `;
+
+        // 进度条填充
+        const progressBarFill = document.createElement('div');
+        progressBarFill.id = 'word-progress-bar-fill';
+        progressBarFill.style.cssText = `
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        `;
+
+        // 进度文本
+        const progressText = document.createElement('div');
+        progressText.id = 'word-progress-text';
+        progressText.style.cssText = `
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        `;
+
+        // 组装文件列表相关元素
+        fileListContainer.appendChild(fileListTitle);
+        fileListContainer.appendChild(fileList);
+
+        progressBar.appendChild(progressBarFill);
+        progressContainer.appendChild(progressBar);
+        progressContainer.appendChild(progressText);
+
+        batchActionsContainer.appendChild(clearListButton);
+        batchActionsContainer.appendChild(batchExtractButton);
+
+        // 提取按钮
+        const extractButton = document.createElement('button');
+        extractButton.textContent = '提取内容';
+        extractButton.style.cssText = `
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+            display: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        `;
+
+        // 结果显示区域
+        const resultArea = document.createElement('div');
+        resultArea.id = 'word-result-area';
+        resultArea.style.cssText = `
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 40vh;
+            min-height: 150px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+            display: none;
+            background-color: #f9f9f9;
+            font-family: Consolas, Monaco, "Courier New", monospace;
+        `;
+
+        // 复制到题库按钮
+        const copyButton = document.createElement('button');
+        copyButton.textContent = '复制内容到题库';
+        copyButton.style.cssText = `
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+            display: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        `;
+
+        // 复制到粘贴板按钮
+        const copyToClipboardButton = document.createElement('button');
+        copyToClipboardButton.textContent = '复制到粘贴板';
+        copyToClipboardButton.style.cssText = `
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+            display: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        `;
+
+        // 状态提示
+        const statusMessage = document.createElement('div');
+        statusMessage.id = 'word-status-message';
+        statusMessage.style.cssText = `
+            margin-top: 12px;
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+            font-weight: 500;
+        `;
+
+        // 组装UI
+        uploadArea.appendChild(uploadText);
+        uploadArea.appendChild(fileInput);
+
+        dialogContent.appendChild(title);
+        dialogContent.appendChild(closeButton);
+        dialogContent.appendChild(uploadArea);
+        dialogContent.appendChild(fileInfo);
+        dialogContent.appendChild(fileListContainer);
+        dialogContent.appendChild(batchActionsContainer);
+        dialogContent.appendChild(progressContainer);
+        dialogContent.appendChild(extractButton);
+        dialogContent.appendChild(resultArea);
+        dialogContent.appendChild(copyButton);
+        dialogContent.appendChild(copyToClipboardButton);
+        dialogContent.appendChild(statusMessage);
+
+        dialog.appendChild(dialogContent);
+        document.body.appendChild(dialog);
+
+        // 点击上传区域触发文件选择
+        uploadArea.addEventListener('click', function() {
+            fileInput.click();
+        });
+
+        // 处理拖拽上传
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#fafafa';
+            uploadArea.style.borderColor = '#ccc';
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleWordFiles(files);
+            }
+        });
+
+        // 处理文件选择
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                handleWordFiles(e.target.files);
+            }
+        });
+
+        // 清空列表按钮点击事件
+        clearListButton.addEventListener('click', function() {
+            window.wordFileList = [];
+            updateWordFileListDisplay();
+            showWordStatus('文件列表已清空', 'info');
+        });
+
+        // 批量提取按钮点击事件
+        batchExtractButton.addEventListener('click', async function() {
+            if (window.wordFileList.length === 0) {
+                showWordStatus('请先添加文件', 'error');
+                return;
+            }
+
+            batchExtractButton.disabled = true;
+            batchExtractButton.textContent = '提取中...';
+            progressContainer.style.display = 'block';
+
+            try {
+                // 检查mammoth库
+                if (!checkMammothLibrary()) {
+                    // 等待库加载
+                    await new Promise(resolve => {
+                        const checkInterval = setInterval(() => {
+                            if (typeof mammoth !== 'undefined') {
+                                clearInterval(checkInterval);
+                                resolve();
+                            }
+                        }, 100);
+
+                        // 设置超时
+                        setTimeout(() => {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }, 5000);
+                    });
+                }
+
+                // 重置提取内容
+                window.wordExtractedContent = '';
+
+                // 批量提取文件
+                await batchExtractWordFiles();
+
+                // 确保内容已正确设置
+                console.log('提取的内容:', window.wordExtractedContent);
+
+                // 显示结果
+                resultArea.textContent = window.wordExtractedContent || '没有提取到内容';
+                resultArea.style.display = 'block';
+
+                // 显示复制按钮
+                copyButton.style.display = 'block';
+                copyToClipboardButton.style.display = 'block';
+
+                if (window.wordExtractedContent) {
+                    showWordStatus(`成功提取 ${window.wordFileList.length} 个文件的内容`, 'success');
+                } else {
+                    showWordStatus('未能提取到任何内容', 'warning');
+                }
+            } catch (error) {
+                console.error('批量提取失败:', error);
+                showWordStatus(`批量提取失败: ${error.message}`, 'error');
+            } finally {
+                batchExtractButton.disabled = false;
+                batchExtractButton.textContent = '批量提取';
+                progressContainer.style.display = 'none';
+            }
+        });
+
+        // 提取按钮点击事件
+        extractButton.addEventListener('click', async function() {
+            if (!window.currentWordFile) {
+                showWordStatus('请先选择文件', 'error');
+                return;
+            }
+
+            extractButton.disabled = true;
+            extractButton.textContent = '提取中...';
+            showWordStatus('正在提取内容，请稍候...', 'loading');
+
+            try {
+                // 检查mammoth库
+                if (!checkMammothLibrary()) {
+                    // 等待库加载
+                    await new Promise(resolve => {
+                        const checkInterval = setInterval(() => {
+                            if (typeof mammoth !== 'undefined') {
+                                clearInterval(checkInterval);
+                                resolve();
+                            }
+                        }, 100);
+
+                        // 设置超时
+                        setTimeout(() => {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }, 5000);
+                    });
+                }
+
+                // 提取内容
+                const content = await extractWordContent(window.currentWordFile);
+
+                // 显示结果
+                resultArea.textContent = content;
+                resultArea.style.display = 'block';
+
+                // 显示复制按钮
+                copyButton.style.display = 'block';
+                copyToClipboardButton.style.display = 'block';
+
+                showWordStatus('内容提取成功', 'success');
+            } catch (error) {
+                console.error('提取失败:', error);
+                showWordStatus(`提取失败: ${error.message}`, 'error');
+            } finally {
+                extractButton.disabled = false;
+                extractButton.textContent = '提取内容';
+            }
+        });
+
+        // 复制到题库按钮点击事件
+        copyButton.addEventListener('click', function() {
+            // 使用批量提取的内容
+            const content = window.wordExtractedContent || resultArea.textContent;
+            console.log('复制的内容:', content);
+            console.log('window.wordExtractedContent:', window.wordExtractedContent);
+            console.log('resultArea.textContent:', resultArea.textContent);
+
+            if (!content || content === '没有提取到内容') {
+                showWordStatus('没有可复制的内容', 'error');
+                return;
+            }
+
+            // 获取题库输入框
+            const panel = document.querySelector('#zx-answer-panel') || document.querySelector('#unified-control-panel');
+            const kbInput = panel ? panel.querySelector('#kb-input') : document.querySelector('#kb-input');
+            console.log('题库输入框:', kbInput);
+
+            if (kbInput) {
+                // 如果输入框已有内容，添加分隔符
+                if (kbInput.value.trim()) {
+                    kbInput.value += '\n\n';
+                }
+                kbInput.value += content;
+
+                // 触发input事件，确保内容被保存
+                const event = new Event('input', { bubbles: true });
+                kbInput.dispatchEvent(event);
+
+                // 保存到localStorage
+                GM_setValue('knowledge_base_raw', kbInput.value);
+
+                // 更新题库计数
+                const raw = kbInput.value;
+                if (raw.trim()) {
+                    KNOWLEDGE_BASE = parseRawText(raw);
+                    renderFullList();
+                }
+
+                showWordStatus('内容已复制到题库输入框', 'success');
+
+                // 关闭对话框
+                dialog.style.display = 'none';
+            } else {
+                showWordStatus('未找到题库输入框', 'error');
+            }
+        });
+
+        // 复制到粘贴板按钮点击事件
+        copyToClipboardButton.addEventListener('click', function() {
+            // 使用批量提取的内容
+            const content = window.wordExtractedContent || resultArea.textContent;
+            console.log('复制到粘贴板的内容:', content);
+
+            if (!content || content === '没有提取到内容') {
+                showWordStatus('没有可复制的内容', 'error');
+                return;
+            }
+
+            // 使用现代的Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(content).then(() => {
+                    showWordStatus('内容已复制到粘贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    // 如果现代API失败，使用备用方法
+                    fallbackCopyToClipboard(content);
+                });
+            } else {
+                // 使用备用方法
+                fallbackCopyToClipboard(content);
+            }
+        });
+
+        // 备用复制到粘贴板方法
+        function fallbackCopyToClipboard(text) {
+            // 创建一个临时的文本区域
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                // 尝试执行复制命令
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showWordStatus('内容已复制到粘贴板', 'success');
+                } else {
+                    showWordStatus('复制失败，请手动复制', 'error');
+                }
+            } catch (err) {
+                console.error('备用复制方法失败:', err);
+                showWordStatus('复制失败，请手动复制', 'error');
+            }
+
+            // 移除临时文本区域
+            document.body.removeChild(textArea);
+        }
+
+        // 处理多个Word文件
+        function handleWordFiles(files) {
+            let validFiles = 0;
+            let invalidFiles = 0;
+
+            // 验证并添加文件
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                // 验证文件类型
+                if (!file.name.match(/\.(docx|doc)$/i)) {
+                    invalidFiles++;
+                    continue;
+                }
+
+                // 检查文件是否已在列表中
+                const isDuplicate = window.wordFileList.some(existingFile =>
+                    existingFile.name === file.name && existingFile.size === file.size
+                );
+
+                if (!isDuplicate) {
+                    window.wordFileList.push(file);
+                    validFiles++;
+                }
+            }
+
+            // 更新文件列表显示
+            updateWordFileListDisplay();
+
+            // 显示状态消息
+            if (validFiles > 0 && invalidFiles > 0) {
+                showWordStatus(`已添加 ${validFiles} 个文件，${invalidFiles} 个文件格式无效`, 'warning');
+            } else if (validFiles > 0) {
+                showWordStatus(`已添加 ${validFiles} 个文件到列表`, 'success');
+            } else {
+                showWordStatus('没有有效的Word文件被添加', 'error');
+            }
+        }
+
+        // 更新文件列表显示
+        function updateWordFileListDisplay() {
+            if (window.wordFileList.length === 0) {
+                fileListContainer.style.display = 'none';
+                clearListButton.style.display = 'none';
+                batchExtractButton.style.display = 'none';
+                extractButton.style.display = 'none';
+                fileInfo.style.display = 'none';
+                return;
+            }
+
+            // 显示文件列表容器
+            fileListContainer.style.display = 'block';
+            clearListButton.style.display = 'block';
+            batchExtractButton.style.display = 'block';
+            extractButton.style.display = 'none'; // 隐藏单文件提取按钮
+
+            // 清空文件列表
+            fileList.innerHTML = '';
+
+            // 添加文件项
+            window.wordFileList.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.style.cssText = `
+                    padding: 8px;
+                    margin-bottom: 5px;
+                    background-color: #fff;
+                    border-radius: 4px;
+                    border-left: 3px solid #4CAF50;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                `;
+
+                const fileName = document.createElement('div');
+                fileName.textContent = `${index + 1}. ${file.name}`;
+                fileName.style.cssText = `
+                    font-weight: 500;
+                    flex: 1;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                `;
+
+                const fileSize = document.createElement('div');
+                fileSize.textContent = formatWordFileSize(file.size);
+                fileSize.style.cssText = `
+                    font-size: 11px;
+                    color: #888;
+                    margin-left: 10px;
+                `;
+
+                const removeButton = document.createElement('button');
+                removeButton.textContent = '×';
+                removeButton.style.cssText = `
+                    background: none;
+                    border: none;
+                    color: #f44336;
+                    font-size: 16px;
+                    cursor: pointer;
+                    margin-left: 5px;
+                    padding: 0;
+                    width: 20px;
+                    height: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+
+                removeButton.addEventListener('click', function() {
+                    window.wordFileList.splice(index, 1);
+                    updateWordFileListDisplay();
+                    showWordStatus('文件已从列表中移除', 'info');
+                });
+
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(fileSize);
+                fileItem.appendChild(removeButton);
+                fileList.appendChild(fileItem);
+            });
+
+            // 更新文件信息
+            const totalSize = window.wordFileList.reduce((sum, file) => sum + file.size, 0);
+            fileInfo.innerHTML = `
+                <div><strong>文件数量:</strong> ${window.wordFileList.length} 个</div>
+                <div><strong>总大小:</strong> ${formatWordFileSize(totalSize)}</div>
+            `;
+            fileInfo.style.display = 'block';
+        }
+
+        // 批量提取Word文件
+        async function batchExtractWordFiles() {
+            let questionNumber = 1; // 全局题目编号
+
+            for (let i = 0; i < window.wordFileList.length; i++) {
+                const file = window.wordFileList[i];
+
+                // 更新进度
+                updateWordProgress(i + 1, window.wordFileList.length, file.name);
+
+                try {
+                    // 提取内容
+                    const content = await extractWordContent(file);
+                    console.log(`文件 ${file.name} 提取的内容:`, content);
+
+                    // 格式化内容，更新题目编号
+                    const formattedContent = formatExtractedWordContentWithNumbering(content, questionNumber);
+                    console.log(`文件 ${file.name} 格式化后的内容:`, formattedContent);
+
+                    // 添加到全局提取内容
+                    if (window.wordExtractedContent) {
+                        window.wordExtractedContent += '\n\n';
+                    }
+                    window.wordExtractedContent += `=== 文件 ${i + 1}: ${file.name} ===\n\n`;
+                    window.wordExtractedContent += formattedContent;
+
+                    // 更新题目编号
+                    const questionCount = countQuestionsInContent(formattedContent);
+                    questionNumber += questionCount;
+
+                } catch (error) {
+                    console.error(`提取文件 ${file.name} 失败:`, error);
+
+                    // 添加错误信息到结果中
+                    if (window.wordExtractedContent) {
+                        window.wordExtractedContent += '\n\n';
+                    }
+                    window.wordExtractedContent += `=== 文件 ${i + 1}: ${file.name} ===\n\n`;
+                    window.wordExtractedContent += `提取失败: ${error.message}\n`;
+                }
+            }
+
+            console.log('批量提取完成，最终内容:', window.wordExtractedContent);
+            return window.wordExtractedContent;
+        }
+
+        // 更新进度条
+        function updateWordProgress(current, total, fileName) {
+            const percentage = Math.round((current / total) * 100);
+            progressBarFill.style.width = `${percentage}%`;
+            progressText.textContent = `正在处理: ${fileName} (${current}/${total})`;
+
+            // 根据进度改变颜色
+            if (percentage < 30) {
+                progressBarFill.style.backgroundColor = '#f44336';
+            } else if (percentage < 70) {
+                progressBarFill.style.backgroundColor = '#ff9800';
+            } else {
+                progressBarFill.style.backgroundColor = '#4CAF50';
+            }
+        }
+
+        // 格式化提取的内容（带编号）
+        function formatExtractedWordContentWithNumbering(text, startNumber) {
+            // 按行分割文本
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+
+            let formattedContent = '';
+            let currentQuestion = null;
+            let questionNumber = startNumber;
+            let inOptions = false;
+            let options = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // 检测题目标题（包含【】的内容）
+                if (line.includes('【') && line.includes('】') && !line.includes('答案')) {
+                    // 如果之前有题目，先添加到结果中
+                    if (currentQuestion) {
+                        formattedContent += formatWordQuestion(currentQuestion, questionNumber);
+                        questionNumber++;
+                    }
+
+                    // 开始新题目
+                    currentQuestion = {
+                        title: line,
+                        options: [],
+                        answer: null
+                    };
+                    inOptions = false;
+                    options = [];
+                    continue;
+                }
+
+                // 检测选项（以A.、B.、C.、D.开头）
+                if (/^[A-D]\./.test(line)) {
+                    inOptions = true;
+                    if (currentQuestion) {
+                        currentQuestion.options.push(line);
+                    }
+                    continue;
+                }
+
+                // 检测答案（包含"答案："）
+                if (line.includes('答案：') || line.includes('答案:')) {
+                    inOptions = false;
+                    if (currentQuestion) {
+                        // 提取答案部分
+                        const answerMatch = line.match(/答案[：:]\s*(.+)/);
+                        if (answerMatch) {
+                            currentQuestion.answer = answerMatch[1];
+                        }
+                    }
+                    continue;
+                }
+
+                // 如果在选项部分，且不是选项或答案，可能是题目的延续
+                if (inOptions && currentQuestion) {
+                    // 检查是否是题目的延续（不包含选项格式）
+                    if (!/^[A-D]\./.test(line) && !line.includes('答案：') && !line.includes('答案:')) {
+                        currentQuestion.title += ' ' + line;
+                    }
+                }
+            }
+
+            // 添加最后一个题目
+            if (currentQuestion) {
+                formattedContent += formatWordQuestion(currentQuestion, questionNumber);
+            }
+
+            return formattedContent;
+        }
+
+        // 统计题目数量
+        function countQuestionsInContent(content) {
+            // 简单统计包含【】的行数，作为题目数量的估计
+            const lines = content.split('\n');
+            let count = 0;
+
+            for (const line of lines) {
+                if (line.includes('【') && line.includes('】') && !line.includes('答案')) {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        // 格式化单个题目
+        function formatWordQuestion(question, number) {
+            let formatted = `${number}. ${question.title}\n`;
+
+            if (question.options && question.options.length > 0) {
+                question.options.forEach(option => {
+                    formatted += `  ${option}\n`;
+                });
+            }
+
+            if (question.answer) {
+                formatted += `  答案：${question.answer}\n`;
+            }
+
+            return formatted;
+        }
+
+        // 格式化文件大小
+        function formatWordFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 处理Word文件
+        function handleWordFile(file) {
+            // 验证文件类型
+            if (!file.name.match(/\.(docx|doc)$/i)) {
+                showWordStatus('请上传Word文档（.docx或.doc格式）', 'error');
+                return;
+            }
+
+            // 显示文件信息
+            fileInfo.innerHTML = `
+                <div><strong>文件名:</strong> ${file.name}</div>
+                <div><strong>大小:</strong> ${formatWordFileSize(file.size)}</div>
+                <div><strong>类型:</strong> ${file.type || '未知'}</div>
+            `;
+            fileInfo.style.display = 'block';
+
+            // 显示提取按钮
+            extractButton.style.display = 'block';
+
+            // 存储文件引用
+            window.currentWordFile = file;
+
+            showWordStatus('文件已准备就绪，点击"提取内容"按钮开始提取', 'success');
+        }
+
+        // 提取Word文档内容
+        function extractWordContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+
+                    try {
+                        // 使用mammoth.js提取内容
+                        mammoth.extractRawText({arrayBuffer: arrayBuffer})
+                            .then(function(result) {
+                                const text = result.value; // 提取的纯文本
+                                // 格式化提取的内容
+                                const formattedContent = formatExtractedWordContent(text);
+                                resolve(formattedContent);
+                            })
+                            .catch(function(error) {
+                                console.error('提取失败:', error);
+                                reject(new Error('提取失败: ' + error.message));
+                            });
+                    } catch (error) {
+                        console.error('mammoth库错误:', error);
+                        reject(new Error('mammoth库错误: ' + error.message));
+                    }
+                };
+
+                reader.onerror = function() {
+                    reject(new Error('文件读取失败'));
+                };
+
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // 格式化提取的内容
+        function formatExtractedWordContent(text) {
+            // 按行分割文本
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+
+            let formattedContent = '';
+            let currentQuestion = null;
+            let questionNumber = 1;
+            let inOptions = false;
+            let options = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // 检测题目标题（包含【】的内容）
+                if (line.includes('【') && line.includes('】') && !line.includes('答案')) {
+                    // 如果之前有题目，先添加到结果中
+                    if (currentQuestion) {
+                        formattedContent += formatWordQuestion(currentQuestion, questionNumber);
+                        questionNumber++;
+                    }
+
+                    // 开始新题目
+                    currentQuestion = {
+                        title: line,
+                        options: [],
+                        answer: null
+                    };
+                    inOptions = false;
+                    options = [];
+                    continue;
+                }
+
+                // 检测选项（以A.、B.、C.、D.开头）
+                if (/^[A-D]\./.test(line)) {
+                    inOptions = true;
+                    if (currentQuestion) {
+                        currentQuestion.options.push(line);
+                    }
+                    continue;
+                }
+
+                // 检测答案（包含"答案："）
+                if (line.includes('答案：') || line.includes('答案:')) {
+                    inOptions = false;
+                    if (currentQuestion) {
+                        // 提取答案部分
+                        const answerMatch = line.match(/答案[：:]\s*(.+)/);
+                        if (answerMatch) {
+                            currentQuestion.answer = answerMatch[1];
+                        }
+                    }
+                    continue;
+                }
+
+                // 如果在选项部分，且不是选项或答案，可能是题目的延续
+                if (inOptions && currentQuestion) {
+                    // 检查是否是题目的延续（不包含选项格式）
+                    if (!/^[A-D]\./.test(line) && !line.includes('答案：') && !line.includes('答案:')) {
+                        currentQuestion.title += ' ' + line;
+                    }
+                }
+            }
+
+            // 添加最后一个题目
+            if (currentQuestion) {
+                formattedContent += formatWordQuestion(currentQuestion, questionNumber);
+            }
+
+            return formattedContent;
+        }
+
+        // 格式化单个题目
+        function formatWordQuestion(question, number) {
+            let formatted = '';
+
+            // 添加题目标题和编号
+            formatted += `${number}）\t${question.title}\n`;
+
+            // 添加选项
+            if (question.options && question.options.length > 0) {
+                question.options.forEach(option => {
+                    formatted += `${option}\n`;
+                });
+            }
+
+            // 添加答案
+            if (question.answer) {
+                formatted += `答案：${question.answer}\n`;
+            }
+
+            // 添加空行分隔
+            formatted += '\n';
+
+            return formatted;
+        }
+
+        // 显示状态消息
+        function showWordStatus(message, type) {
+            statusMessage.textContent = message;
+
+            // 根据消息类型设置颜色和样式
+            switch(type) {
+                case 'success':
+                    statusMessage.style.color = '#4CAF50';
+                    statusMessage.style.fontWeight = '600';
+                    statusMessage.style.backgroundColor = '#e8f5e8';
+                    statusMessage.style.padding = '8px 12px';
+                    statusMessage.style.borderRadius = '6px';
+                    break;
+                case 'error':
+                    statusMessage.style.color = '#f44336';
+                    statusMessage.style.fontWeight = '600';
+                    statusMessage.style.backgroundColor = '#ffebee';
+                    statusMessage.style.padding = '8px 12px';
+                    statusMessage.style.borderRadius = '6px';
+                    break;
+                case 'warning':
+                    statusMessage.style.color = '#ff9800';
+                    statusMessage.style.fontWeight = '500';
+                    statusMessage.style.backgroundColor = '#fff3e0';
+                    statusMessage.style.padding = '8px 12px';
+                    statusMessage.style.borderRadius = '6px';
+                    break;
+                case 'loading':
+                    statusMessage.style.color = '#2196F3';
+                    statusMessage.style.fontWeight = '500';
+                    statusMessage.style.backgroundColor = '#e3f2fd';
+                    statusMessage.style.padding = '8px 12px';
+                    statusMessage.style.borderRadius = '6px';
+                    break;
+                default: // info
+                    statusMessage.style.color = '#666';
+                    statusMessage.style.fontWeight = '500';
+                    statusMessage.style.backgroundColor = 'transparent';
+                    statusMessage.style.padding = '0';
+            }
+
+            // 添加过渡效果
+            statusMessage.style.transition = 'all 0.3s ease';
+
+            // 如果是成功或错误消息，3秒后恢复默认样式
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    statusMessage.style.color = '#666';
+                    statusMessage.style.fontWeight = '500';
+                    statusMessage.style.backgroundColor = 'transparent';
+                    statusMessage.style.padding = '0';
+                }, 3000);
+            }
+        }
+
+        // 格式化文件大小
+        function formatWordFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 初始提示
+        showWordStatus('请上传Word文档', 'info');
     }
 
     // 启动脚本
@@ -3633,6 +4817,7 @@
                 <div id="tab-content" style="padding:12px; overflow:auto; max-height:400px;">
                     <!-- 答题助手标签页内容 -->
                     <div id="answer-tab" class="tab-pane">
+                        <button id="upload-word-btn" style="width:100%; padding:8px; background:#FF9800; color:white; border:none; border-radius:4px; margin-bottom:8px; font-weight:500;">📄 上传Word文档</button>
                         <textarea id="kb-input" placeholder="粘贴题库文本（支持足下教育标准格式）" style="width:100%; height:100px; margin-bottom:8px; padding:6px; border:1px solid #ccc; border-radius:4px; font-family:monospace; font-size:13px;"></textarea>
                         <button id="parse-btn" style="width:100%; padding:6px; background:#409eff; color:white; border:none; border-radius:4px; margin-bottom:8px;">✅ 解析题库</button>
                         <div id="kb-count" style="margin-bottom:6px; color:#666; font-size:12px;"></div>
@@ -3786,27 +4971,6 @@
             renderFullList();
         }
 
-        function renderFullList() {
-            const countEl = panel.querySelector('#kb-count');
-            const listEl = panel.querySelector('#kb-full-list');
-            const count = Object.keys(KNOWLEDGE_BASE).length;
-            countEl.textContent = `✅ 成功解析 ${count} 道题`;
-
-            if (count === 0) {
-                listEl.innerHTML = '<i style="color:#999;">未识别到有效题目，请检查格式</i>';
-                return;
-            }
-
-            let html = '<ul style="padding-left:16px; margin:0; font-size:12px; line-height:1.6;">';
-            Object.entries(KNOWLEDGE_BASE).forEach(([q, a]) => {
-                // 保留代码块显示
-                const displayQ = q.replace(/`/g, '<code>').replace(/`/g, '</code>');
-                html += `<li><strong style="color:#409eff;">${a}</strong> ${displayQ}</li>`;
-            });
-            html += '</ul>';
-            listEl.innerHTML = html;
-        }
-
         // 更新题目提取状态
         function updateExtractionStatus() {
             const statusEl = panel.querySelector('#extraction-status');
@@ -3932,7 +5096,7 @@
         else if (answerKey.length > 1 && isMultipleChoice) {
             // 使用公共函数分割答案
             const keys = splitAnswerKey(answerKey);
-            
+
             for (const key of keys) {
                 // 使用公共函数查找选项
                 const options = findOptions();
@@ -3950,7 +5114,7 @@
                     }
                 }
             }
-            
+
             // 选项处理完成后，验证选项是否真正被勾选
             setTimeout(() => {
                 verifyOptionSelection(answerKey, false);
@@ -3960,7 +5124,7 @@
         else {
             // 使用公共函数分割答案
             const keys = splitAnswerKey(answerKey);
-            
+
             for (const key of keys) {
                 // 使用公共函数选择选项
                 const result = selectOption(key, [], false);
@@ -5462,7 +6626,7 @@
         window.fetch = async (...args) => {
             try {
                 const response = await originalFetch.apply(this, args);
-                
+
                 // 检查响应状态，特别是404错误
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -5474,14 +6638,14 @@
                     console.warn(`HTTP错误 ${response.status}:`, args[0]);
                     return response;
                 }
-                
+
                 // 检查响应内容类型
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
                     console.warn('非JSON响应:', args[0], 'Content-Type:', contentType);
                     return response;
                 }
-                
+
                 // 安全地解析JSON
                 try {
                     const jsonData = await response.clone().json();
@@ -5490,7 +6654,7 @@
                     console.warn('JSON解析失败:', args[0], jsonError.message);
                     // 不抛出错误，避免中断页面功能
                 }
-                
+
                 return response;
             } catch (e) {
                 console.error('Fetch请求失败:', e);
@@ -5519,19 +6683,19 @@
                             // 对于404错误，不处理，只记录警告
                             return;
                         }
-                        
+
                         if (this.status !== 200) {
                             console.warn(`XHR HTTP错误 ${this.status}:`, this._url);
                             return;
                         }
-                        
+
                         // 检查响应内容类型
                         const contentType = this.getResponseHeader('Content-Type');
                         if (!contentType || !contentType.includes('application/json')) {
                             console.warn('XHR非JSON响应:', this._url, 'Content-Type:', contentType);
                             return;
                         }
-                        
+
                         // 安全地解析JSON
                         try {
                             const response = JSON.parse(this.responseText);
@@ -5610,8 +6774,8 @@
         // 添加全局错误处理
         window.addEventListener('error', function(event) {
             // 过滤掉一些非关键错误
-            if (event.message && 
-                (event.message.includes('GetKnowQuestionEvaluation') || 
+            if (event.message &&
+                (event.message.includes('GetKnowQuestionEvaluation') ||
                  event.message.includes('JSON') ||
                  event.message.includes('404'))) {
                 console.warn('已过滤非关键错误:', event.message);
@@ -5623,9 +6787,9 @@
         // 添加未处理的Promise拒绝错误处理
         window.addEventListener('unhandledrejection', function(event) {
             // 过滤掉API相关的错误
-            if (event.reason && 
-                (event.reason.message && 
-                 (event.reason.message.includes('GetKnowQuestionEvaluation') || 
+            if (event.reason &&
+                (event.reason.message &&
+                 (event.reason.message.includes('GetKnowQuestionEvaluation') ||
                   event.reason.message.includes('JSON') ||
                   event.reason.message.includes('404')))) {
                 console.warn('已过滤Promise拒绝错误:', event.reason.message);
